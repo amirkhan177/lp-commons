@@ -1,7 +1,7 @@
 [project]
 name = "lpmap"
 version = "0.1.0"
-description = "Ingest public SEC filings (Form D first) into the OpenSource LP Map database"
+description = "Ingest public SEC filings (Form D first) into the OpenPitchBook database"
 requires-python = ">=3.12"
 license = "MIT"
 dependencies = [

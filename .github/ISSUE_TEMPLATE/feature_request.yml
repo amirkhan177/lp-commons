@@ -1,0 +1,15 @@
+name: Feature or data source request
+description: Suggest a feature or a new public data source.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Data source (if any)
+      description: Link to the public source and its terms of use. Only lawfully public sources can be added.

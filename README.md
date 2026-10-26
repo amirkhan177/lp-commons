@@ -1,7 +1,18 @@
-# OpenSource LP Map
+# OpenPitchBook
+
+[![License: MIT](https://img.shields.io/badge/code-MIT-blue.svg)](LICENSE)
+[![Data: ODbL](https://img.shields.io/badge/data-ODbL%201.0-green.svg)](DATA_LICENSE.md)
 
 Open-source LP database and warm-intro connection mapper for emerging VC fund managers.
 Built from free public filings, starting with SEC Form D.
+
+> [!IMPORTANT]
+> **Not investment, legal, or tax advice, and not an offer or solicitation of any security.**
+> Data comes from public filings, is self-reported and machine-classified, and may be wrong —
+> verify against the linked source before relying on it. You are responsible for complying with
+> securities laws (e.g. Reg D general-solicitation rules) when contacting investors.
+> Provided **as is, without warranty or liability**. Not affiliated with PitchBook Data, Inc.,
+> the SEC, or any other company named here. Read the full **[Disclaimer](DISCLAIMER.md)**.
 
 > Status: P0 — Postgres schema + Form D ingest service. Web app, LinkedIn/Clay import and
 > intro-path finding come in later phases.
@@ -83,6 +94,20 @@ recorded in `ingest_state`, so runs are resumable and idempotent.
 Scraper variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SEC_USER_AGENT`,
 optional `FORMD_BACKFILL_FROM` (default `2016q1`).
 
+## Project docs
+
+| | |
+|---|---|
+| [DISCLAIMER.md](DISCLAIMER.md) | Not advice; data accuracy; no warranty; limitation of liability |
+| [PRIVACY.md](PRIVACY.md) | What personal data is held, and how to request correction or removal |
+| [SECURITY.md](SECURITY.md) | Reporting vulnerabilities privately |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, data-source rules, PR checklist |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
+
 ## License
 
-Code: MIT. Compiled dataset: ODbL.
+- Code: [MIT](LICENSE)
+- Compiled dataset: [ODbL 1.0](DATA_LICENSE.md)
+
+"PitchBook" is a trademark of PitchBook Data, Inc. This project is independent and not
+affiliated with or endorsed by it.

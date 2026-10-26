@@ -1,0 +1,35 @@
+name: Data correction or removal request
+description: A record is wrong, misattributed, or you'd like a person's record removed.
+labels: [data-correction]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **This issue is public.** Do not include phone numbers, email addresses, home addresses,
+        or ID documents. If your request involves information you don't want public, use
+        [private reporting](https://github.com/amirkhan177/OpenPitchBook/security/advisories/new)
+        instead and say it's a privacy request. See [PRIVACY.md](https://github.com/amirkhan177/OpenPitchBook/blob/main/PRIVACY.md).
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Request type
+      options:
+        - Correct a record
+        - Record is attributed to the wrong person
+        - Remove a person's record
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: record
+    attributes:
+      label: Which record?
+      description: Fund or organization name, and the filing link (EDGAR URL) if you have it.
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: What's wrong / what should change?
+    validations:
+      required: true

@@ -1,0 +1,20 @@
+name: Bug report
+description: Something in the code or pipeline doesn't work.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Include the command you ran and the error output. Remove secrets (DATABASE_URL, API keys) first.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+  - type: input
+    id: version
+    attributes:
+      label: Commit / version
+      placeholder: e.g. 9fda78f
