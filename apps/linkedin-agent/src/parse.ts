@@ -10,6 +10,7 @@ export interface Connection {
   company: string | null;
   position: string | null;
   connectedOn: string | null; // YYYY-MM-DD
+  photoUrl: string | null;     // LinkedIn CDN image, if shown
 }
 
 export interface ExperienceEntry {
@@ -68,7 +69,18 @@ function splitName(name: string): { firstName: string; lastName: string } {
 const NOISE = /^(message|remove connection|more actions|connected on|member['’]s name|member['’]s occupation|follow|pending)$/i;
 
 /** One connection card: profile link + its visible text lines. */
-export function parseConnectionCard(href: string, text: string): Connection | null {
+/** Only LinkedIn's own image CDN over https; anything else (data URIs, placeholders) is dropped. */
+export function safePhotoUrl(src: string | null | undefined): string | null {
+  if (!src) return null;
+  try {
+    const u = new URL(src);
+    return u.protocol === "https:" && /(^|\.)licdn\.com$/.test(u.hostname) ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseConnectionCard(href: string, text: string, photo?: string | null): Connection | null {
   const url = canonicalProfileUrl(href);
   if (!url) return null;
   const lines = cleanLines(text).filter((l) => !NOISE.test(l));
@@ -78,7 +90,7 @@ export function parseConnectionCard(href: string, text: string): Connection | nu
   if (!name) return null;
   const headline = rest[1] ?? null;
   return { name, ...splitName(name), url, headline, ...headlineRole(headline),
-           connectedOn: connectedLine ? parseConnectedOn(connectedLine) : null };
+           connectedOn: connectedLine ? parseConnectedOn(connectedLine) : null, photoUrl: safePhotoUrl(photo) };
 }
 
 const DATE_RANGE = /^((?:[A-Za-z]{3}\s+)?\d{4})\s*[-–—]\s*(present|(?:[A-Za-z]{3}\s+)?\d{4})/i;

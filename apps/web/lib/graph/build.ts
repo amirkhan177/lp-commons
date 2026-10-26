@@ -17,10 +17,10 @@ export interface TargetInfo {
   total_offering_amount: string | null;
   total_amount_sold: string | null;
   num_investors: number | null;
-  managers: { name: string; role: "manager" | "general_partner"; url: string | null }[];
+  managers: { id: number; name: string; role: "manager" | "general_partner"; url: string | null }[];
 }
 
-const MANAGERS_JSON = `COALESCE((SELECT json_agg(json_build_object('name', m.manager_name, 'role', m.role, 'url', m.source_url)
+const MANAGERS_JSON = `COALESCE((SELECT json_agg(json_build_object('id', m.manager_entity_id, 'name', m.manager_name, 'role', m.role, 'url', m.source_url)
                                     ORDER BY m.role DESC, m.manager_name)
                      FROM fund_manager_names m WHERE m.fund_entity_id = e.id), '[]')`;
 

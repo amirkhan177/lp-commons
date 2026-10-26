@@ -46,6 +46,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
                   {hits.map((h) => (
                     <li key={h.entity_id}>
                       <Link href={`/map?q=${encodeURIComponent(q)}&target=${h.entity_id}`}>{h.name}</Link>
+                      <Link href={`/org/${h.entity_id}`} className="small" style={{ marginLeft: 8 }}>profile</Link>
                       {h.type === "fof" && <span className="badge">FoF</span>}
                       {h.is_active && <span className="badge ok">active</span>}
                       {h.is_spv && <span className="badge warn">SPV</span>}
@@ -90,13 +91,15 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
                       {t.managers.map((m) => (
                         <div key={m.name}>
                           <span className="hud-kicker" style={{ marginRight: 8 }}>{m.role === "manager" ? "Management co." : "General partner"}</span>
-                          {m.url ? <a href={m.url} target="_blank" rel="noreferrer">{m.name}</a> : m.name}
+                          <Link href={`/org/${m.id}`}>{m.name}</Link>
                         </div>
                       ))}
                     </div>
                   )}
                   {raised != null && <div className="gauge" title={`${Math.round(raised * 100)}% of raise goal raised`}><i style={{ width: `${raised * 100}%` }} /></div>}
                   <div className="small muted" style={{ marginTop: 10 }}>
+                    <Link href={`/org/${t.id}`}>Fund profile &amp; people</Link>
+                    {" · "}
                     <a href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${t.cik}&type=D`} target="_blank" rel="noreferrer">Source: SEC EDGAR filings ↗</a>
                   </div>
                 </div>

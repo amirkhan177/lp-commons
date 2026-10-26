@@ -92,6 +92,7 @@ export default async function ReachPage({ searchParams }: { searchParams: Promis
               <tr key={r.entity_id}>
                 <td>
                   <Link href={`/map?target=${r.entity_id}`}>{r.name}</Link>
+                  <Link href={`/org/${r.entity_id}`} className="small" style={{ marginLeft: 8 }}>profile</Link>
                   {r.type === "fof" && <span className="badge">FoF</span>}
                   <div className="muted small">{[r.state, r.vintage && `vintage ${r.vintage}`, `raised ${money(r.total_amount_sold)} of ${money(r.total_offering_amount)}`].filter(Boolean).join(" · ")}</div>
                 </td>

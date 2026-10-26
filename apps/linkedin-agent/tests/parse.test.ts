@@ -17,7 +17,7 @@ Message`;
     expect(parseConnectionCard("/in/Ana-Silva-123/?miniProfileUrn=x", text)).toEqual({
       name: "Ana Silva, CFA", firstName: "Ana", lastName: "Silva", url: "https://www.linkedin.com/in/ana-silva-123",
       headline: "General Partner at Seed Ventures | Pre-seed B2B", position: "General Partner", company: "Seed Ventures",
-      connectedOn: "2023-03-15",
+      connectedOn: "2023-03-15", photoUrl: null,
     });
   });
 
@@ -75,6 +75,16 @@ London`;
 
   it("ignores items without dates", () => {
     expect(parseExperienceItem("Show all 12 experiences")).toBeNull();
+  });
+});
+
+describe("photos", () => {
+  it("keeps only https LinkedIn CDN images", () => {
+    const ok = "https://media.licdn.com/dms/image/v2/abc/profile-displayphoto-shrink_100_100/0/1?e=1&v=beta&t=x";
+    expect(parseConnectionCard("/in/a-b/", "A B\nPM at X", ok)!.photoUrl).toBe(ok);
+    expect(parseConnectionCard("/in/a-b/", "A B", "data:image/gif;base64,R0lG")!.photoUrl).toBeNull();
+    expect(parseConnectionCard("/in/a-b/", "A B", "https://evil.example.com/x.png")!.photoUrl).toBeNull();
+    expect(parseConnectionCard("/in/a-b/", "A B", "http://media.licdn.com/x.png")!.photoUrl).toBeNull();
   });
 });
 

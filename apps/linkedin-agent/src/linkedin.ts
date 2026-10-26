@@ -60,20 +60,21 @@ export async function collectConnections(page: Page): Promise<{ connections: Con
   }
 
   const cards = await page.evaluate(() => {
-    const out = new Map<string, { href: string; text: string }>();
+    const out = new Map<string, { href: string; text: string; photo: string | null }>();
     for (const a of Array.from(document.querySelectorAll<HTMLAnchorElement>('main a[href*="/in/"]'))) {
       const href = a.getAttribute("href") ?? "";
       const card = a.closest("li, [role='listitem']") ?? a.parentElement?.parentElement ?? a;
       const text = (card as HTMLElement).innerText ?? "";
+      const photo = (card.querySelector("img") as HTMLImageElement | null)?.src ?? null;
       const key = href.split("?")[0];
-      if (!out.has(key) || text.length > out.get(key)!.text.length) out.set(key, { href, text });
+      if (!out.has(key) || text.length > out.get(key)!.text.length) out.set(key, { href, text, photo });
     }
     return [...out.values()];
   });
   const seen = new Set<string>();
   const connections: Connection[] = [];
   for (const c of cards) {
-    const parsed = parseConnectionCard(c.href, c.text);
+    const parsed = parseConnectionCard(c.href, c.text, c.photo);
     if (parsed && !seen.has(parsed.url)) { seen.add(parsed.url); connections.push(parsed); }
   }
   return { connections, blocked: null };

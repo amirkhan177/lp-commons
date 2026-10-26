@@ -44,16 +44,17 @@ export async function upsertConnections(list: Connection[]): Promise<void> {
     for (const c of list) {
       const { rows } = await client.query<{ id: number }>(
         `INSERT INTO user_contacts (workspace_id, source, first_name, last_name, linkedin_url, company, position,
-                                    headline, connected_on, name_key)
-         VALUES ($1, 'linkedin', $2, $3, $4, $5, $6, $7, $8, $9)
+                                    headline, connected_on, name_key, photo_url)
+         VALUES ($1, 'linkedin', $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (workspace_id, linkedin_url) DO UPDATE SET
            first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, headline = EXCLUDED.headline,
            company = COALESCE(user_contacts.company, EXCLUDED.company),
            position = COALESCE(user_contacts.position, EXCLUDED.position),
-           connected_on = COALESCE(EXCLUDED.connected_on, user_contacts.connected_on), name_key = EXCLUDED.name_key
+           connected_on = COALESCE(EXCLUDED.connected_on, user_contacts.connected_on), name_key = EXCLUDED.name_key,
+           photo_url = COALESCE(EXCLUDED.photo_url, user_contacts.photo_url)
          RETURNING id`,
         [WORKSPACE_ID, c.firstName, c.lastName, c.url, c.company, c.position, c.headline, c.connectedOn,
-         personKey(c.firstName, c.lastName)],
+         personKey(c.firstName, c.lastName), c.photoUrl],
       );
       await client.query(
         `INSERT INTO user_edges (workspace_id, contact_id, kind, strength, evidence) VALUES ($1, $2, 'linkedin', $3, $4)
