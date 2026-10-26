@@ -71,7 +71,7 @@ export function parseLinkedInConnections(text: string): LinkedInContact[] {
     out.push({
       firstName: firstName ?? "",
       lastName: lastName ?? "",
-      url: clean(r[idx.url]),
+      url: (() => { const u = clean(r[idx.url]); return u ? canonicalProfileUrl(u) ?? u : null; })(),
       email: idx.email >= 0 ? clean(r[idx.email]) : null,
       company: clean(r[idx.company]),
       position: clean(r[idx.position]),
@@ -79,6 +79,12 @@ export function parseLinkedInConnections(text: string): LinkedInContact[] {
     });
   }
   return out;
+}
+
+/** https://www.linkedin.com/in/<slug>, lowercase, no trailing slash (same as apps/linkedin-agent). */
+export function canonicalProfileUrl(href: string): string | null {
+  const m = href.match(/\/in\/([^/?#]+)/);
+  return m ? `https://www.linkedin.com/in/${decodeURIComponent(m[1]).toLowerCase()}` : null;
 }
 
 /** Mirrors pipelines/src/lpmap/normalize.py person_key(): first + last, ASCII, lowercase. */

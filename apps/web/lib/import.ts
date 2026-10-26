@@ -47,7 +47,7 @@ export async function importContacts(contacts: LinkedInContact[]): Promise<{ imp
  * Deterministic contact -> filing-person matching. A contact matches a person with the same
  * normalized name when:
  *   - 'auto' (0.9):     exactly one same-name person has a role at a fund whose firm matches the
- *                       contact's LinkedIn company;
+ *                       contact's company or any firm in their LinkedIn work history;
  *   - 'possible' (0.5): the name is unique among filing people but nothing corroborates it.
  * Ambiguous names stay unmatched. 'confirmed' / 'rejected' decisions are never overwritten.
  */
@@ -62,7 +62,8 @@ export async function runMatching(): Promise<{ auto: number; possible: number }>
     `WITH cand AS (
        SELECT c.id AS contact_id, p.id AS person_id,
               EXISTS (SELECT 1 FROM roles r JOIN entities e ON e.id = r.entity_id
-                      WHERE r.person_id = p.id AND e.firm_key = c.company_firm_key) AS corroborated
+                      WHERE r.person_id = p.id AND (e.firm_key = c.company_firm_key OR e.firm_key IN (
+                        SELECT company_firm_key FROM user_contact_experience x WHERE x.contact_id = c.id))) AS corroborated
        FROM user_contacts c JOIN people p ON p.name_normalized = c.name_key
        WHERE c.workspace_id = $1 AND c.match_status = 'none' AND c.name_key <> ''
      ), ranked AS (

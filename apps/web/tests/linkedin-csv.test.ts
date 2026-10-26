@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseConnectedOn, parseCsv, parseLinkedInConnections, personKey } from "@/lib/linkedin-csv";
+import { canonicalProfileUrl, parseConnectedOn, parseCsv, parseLinkedInConnections, personKey } from "@/lib/linkedin-csv";
 
 const EXPORT = `Notes:
 "When exporting your connection data, you may notice that some of the email addresses are missing."
@@ -33,6 +33,11 @@ describe("LinkedIn Connections.csv", () => {
     expect(parseConnectedOn("5 Sep 2024")).toBe("2024-09-05");
     expect(parseConnectedOn("2024-09-05")).toBe("2024-09-05");
     expect(parseConnectedOn("yesterday")).toBeNull();
+  });
+
+  it("canonicalizes profile URLs like the LinkedIn agent", () => {
+    expect(canonicalProfileUrl("https://www.linkedin.com/in/Ana-Silva-0000/")).toBe("https://www.linkedin.com/in/ana-silva-0000");
+    expect(parseLinkedInConnections(EXPORT)[0].url).toBe("https://www.linkedin.com/in/ana-silva-0000");
   });
 
   it("normalizes names like the Python pipeline", () => {

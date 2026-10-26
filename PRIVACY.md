@@ -50,6 +50,14 @@ You can delete your workspace's imported data at any time; deleting a workspace 
 contacts and edges (`ON DELETE CASCADE`). Disconnecting Google revokes access and deletes every
 Google-sourced contact. Integration tokens are encrypted at rest.
 
+**LinkedIn agent (opt-in).** If you connect it, you sign in to LinkedIn yourself in a browser
+window running on the server; keystrokes are passed to LinkedIn and never logged or stored. The
+resulting session cookies are encrypted with a key held **only by the agent service** (derived
+per user, bound to your workspace), so the web app, the database, and backups only ever hold
+ciphertext; the agent decrypts it in memory only while working. The agent reads your connections
+list and each connection's Experience section and nothing else. *Disconnect* deletes the session
+and all work history it read. Note that whoever operates the server controls the agent's keys.
+
 ## 3. If you run your own instance
 
 You are the **data controller/operator** for that instance. That means you are responsible

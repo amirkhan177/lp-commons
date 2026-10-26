@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Nav from "../nav";
+import LinkedInSection from "./linkedin-section";
 import { enqueueMapping } from "@/lib/agent/run";
 import { decrypt, encryptionConfigured } from "@/lib/crypto";
 import { db, WORKSPACE_ID } from "@/lib/db";
@@ -18,6 +19,10 @@ const MESSAGES: Record<string, string> = {
   google_denied: "Google access wasn't granted.",
   google_token: "Couldn't complete Google sign-in. Please try again.",
   google_scopes: "All three read-only permissions are needed (contacts, other contacts, calendar). Please try again and allow them.",
+  linkedin_consent: "Please tick all three boxes to continue.",
+  linkedin_agent_down: "The LinkedIn agent service isn't reachable right now. Try again in a minute.",
+  linkedin_sync: "The agent will run shortly.",
+  linkedin_disconnected: "LinkedIn disconnected. The session and all work history read by the agent were deleted.",
 };
 
 async function syncNow() {
@@ -65,6 +70,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {ok && <p className="badge ok">{MESSAGES[ok] ?? ok}</p>}
       {error && <p className="error">{MESSAGES[error] ?? error}</p>}
 
+      <div className="stack">
+      <LinkedInSection />
       <section className="card stack">
         <h2 style={{ margin: 0 }}>Google contacts & calendar</h2>
         <p className="muted" style={{ margin: 0 }}>
@@ -96,6 +103,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </div>
         )}
       </section>
+      </div>
     </div>
   );
 }

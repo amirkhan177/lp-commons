@@ -5,7 +5,7 @@ import { reachAll } from "../graph/reach";
 import { notify } from "../notify";
 import { loadNetworkGraph } from "./network";
 
-export type Trigger = "linkedin_import" | "google_sync" | "match_review" | "manual" | "startup";
+export type Trigger = "linkedin_import" | "linkedin_agent" | "google_sync" | "match_review" | "manual" | "startup";
 
 const LOCK_KEY = 72_610_001; // pg advisory lock: one mapping run at a time per database
 

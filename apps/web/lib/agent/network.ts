@@ -1,7 +1,7 @@
 import "server-only";
 import type { PoolClient } from "pg";
 import { WORKSPACE_ID } from "../db";
-import { CONTACT_SELECT, contactEdges, type ContactRow } from "../graph/contacts";
+import { CONTACT_SELECT, contactEdges, contactFirmKeys, type ContactRow } from "../graph/contacts";
 import type { Graph, GraphEdge, GraphNode } from "../graph/paths";
 import { roleWeight, SAME_FIRM_WEIGHT } from "../graph/weights";
 
@@ -23,10 +23,12 @@ export async function loadNetworkGraph(db: PoolClient): Promise<{ graph: Graph; 
     `${CONTACT_SELECT}
      WHERE c.workspace_id = $1 AND (
        (c.matched_person_id IS NOT NULL AND c.match_status IN ('auto', 'possible', 'confirmed'))
-       OR c.company_firm_key IN (SELECT firm_key FROM entities WHERE firm_key IS NOT NULL))`,
+       OR c.company_firm_key IN (SELECT firm_key FROM entities WHERE firm_key IS NOT NULL)
+       OR EXISTS (SELECT 1 FROM user_contact_experience x JOIN entities e ON e.firm_key = x.company_firm_key
+                  WHERE x.contact_id = c.id))`,
     [WORKSPACE_ID],
   )).rows;
-  const contactFirms = [...new Set(contacts.map((c) => c.company_firm_key).filter((k): k is string => !!k))];
+  const contactFirms = [...new Set(contacts.flatMap(contactFirmKeys))];
   const matched = [...new Set(contacts.map((c) => c.matched_person_id).filter((id): id is number => id != null))];
 
   // E_A: funds of matched people + funds of contacts' firms. P: everyone on E_A (incl. matched people).

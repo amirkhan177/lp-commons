@@ -72,8 +72,15 @@ for any fees or usage charges they bill you, and for keeping your keys secure. I
 - **SEC EDGAR:** you must send your own identifying `User-Agent` and stay within the SEC's
   fair-access limits (currently 10 requests per second). The code enforces that cap, but you
   operate the scraper and are responsible for its traffic.
-- **LinkedIn:** the project only reads the connections export you download yourself. Do not use
-  it, or modify it, to scrape LinkedIn.
+- **LinkedIn:** by default the project only reads the connections export you download yourself.
+  The optional **LinkedIn agent** (off unless an operator enables it, and opt-in per user) signs in
+  to LinkedIn as you, in a browser on the operator's server, and reads your own connections and
+  their Experience sections. **LinkedIn's User Agreement prohibits automated access, and LinkedIn
+  may restrict or suspend accounts that use it.** If you enable it, you do so at your own risk and
+  accept that risk for your own account; operators who host it for others are responsible for
+  obtaining each user's informed consent and for any claims arising from it. The agent is
+  read-only and rate-limited, and stops when LinkedIn shows a security check; do not modify it to
+  evade detection, solve CAPTCHAs, read beyond a user's own connections, or act on anyone's behalf.
 - **AI output** (e.g. Claude-generated matches, scores, or draft messages) can be wrong.
   Review it before relying on or sending it.
 

@@ -4,10 +4,14 @@ Thanks for helping. Issues, data fixes, new data sources, and code are all welco
 
 ## Ground rules
 
-- **Public data only.** New sources must be lawfully and publicly available (e.g. government
-  filings, published pension reports). No scraping of sites whose terms forbid it — including
-  LinkedIn — no paywalled or leaked data, and no personal contact details (emails, phones, home
-  addresses) in the public dataset.
+- **Public data only.** New sources for the public dataset must be lawfully and publicly
+  available (e.g. government filings, published pension reports). No scraping of sites whose
+  terms forbid it, no paywalled or leaked data, and no personal contact details (emails, phones,
+  home addresses) in the public dataset.
+- **LinkedIn agent limits are fixed.** The opt-in agent (`apps/linkedin-agent`) works only on a
+  consenting user's own session and own connections, read-only, rate-limited, and stops at any
+  security check. Contributions that add CAPTCHA solving, fingerprint/stealth evasion, proxy
+  rotation, messaging/invites, or crawling beyond the user's own connections won't be accepted.
 - **Respect source rate limits.** All SEC requests go through `SecClient` (≤ 10 req/s). Don't
   bypass it.
 - **Provenance on every fact.** Every row written from a source carries a `source_url` /

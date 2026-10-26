@@ -1,13 +1,22 @@
 import type { GraphEdge, GraphNode } from "./paths";
-import { WORKS_AT_WEIGHT } from "./weights";
+import { PAST_WORK_WEIGHT, WORKS_AT_WEIGHT } from "./weights";
 
 /** Your contacts with their strongest link to you (any source). Append WHERE ... to use. */
 export const CONTACT_SELECT = `
   SELECT c.id, c.source, c.first_name, c.last_name, c.company, c.position, c.company_firm_key,
          c.matched_person_id, c.match_status, c.match_confidence, c.connected_on::text,
          c.meetings, c.last_met_on::text,
-         COALESCE((SELECT max(strength) FROM user_edges ue WHERE ue.contact_id = c.id), 0.6) AS strength
+         COALESCE((SELECT max(strength) FROM user_edges ue WHERE ue.contact_id = c.id), 0.6) AS strength,
+         COALESCE((SELECT json_agg(json_build_object('firm', x.company_firm_key, 'company', x.company, 'titles', x.titles,
+                                                     'started', x.started, 'ended', x.ended, 'current', x.is_current)
+                                   ORDER BY x.position)
+                   FROM user_contact_experience x WHERE x.contact_id = c.id AND x.company_firm_key IS NOT NULL), '[]') AS experience
   FROM user_contacts c`;
+
+/** Firm keys a contact has worked at: current company plus LinkedIn work history. */
+export function contactFirmKeys(c: ContactRow): string[] {
+  return [...new Set([c.company_firm_key, ...c.experience.map((x) => x.firm)].filter((k): k is string => !!k))];
+}
 
 export interface ContactRow {
   id: number;
@@ -24,6 +33,7 @@ export interface ContactRow {
   meetings: number;
   last_met_on: string | null;
   strength: number;
+  experience: { firm: string; company: string; titles: string[]; started: string | null; ended: string | null; current: boolean }[];
 }
 
 function youEvidence(c: ContactRow): string {
@@ -56,9 +66,21 @@ export function contactEdges(
         : `Matched to filings by name${c.match_status === "confirmed" ? " (you confirmed)" : " and firm"}`,
     });
   }
-  for (const fund of (c.company_firm_key && fundsByFirm.get(c.company_firm_key)) || []) {
-    edges.push({ source: id, target: fund, kind: "works_at", weight: WORKS_AT_WEIGHT,
-                 evidence: `${c.source === "google" ? "Google contact" : "LinkedIn"}: ${c.position ?? "works"} at ${c.company}` });
+  // Best "works/worked at" link per fund: current job beats past jobs.
+  const byFund = new Map<string, GraphEdge>();
+  const via = (firm: string | null, weight: number, evidence: string) => {
+    for (const fund of (firm && fundsByFirm.get(firm)) || []) {
+      const cur = byFund.get(fund);
+      if (!cur || weight > cur.weight) byFund.set(fund, { source: id, target: fund, kind: "works_at", weight, evidence });
+    }
+  };
+  via(c.company_firm_key, WORKS_AT_WEIGHT,
+      `${c.source === "google" ? "Google contact" : "LinkedIn"}: ${c.position ?? "works"} at ${c.company}`);
+  for (const x of c.experience) {
+    const when = [x.started, x.current ? "present" : x.ended].filter(Boolean).join("–");
+    via(x.firm, x.current ? WORKS_AT_WEIGHT : PAST_WORK_WEIGHT,
+        `LinkedIn work history: ${x.titles[0] ?? "worked"} at ${x.company}${when ? ` (${when})` : ""}`);
   }
+  edges.push(...byFund.values());
   return { node, edges };
 }

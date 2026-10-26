@@ -1,6 +1,7 @@
 // Hop weights shared by the per-fund path view and the background mapping agent.
 
 export const WORKS_AT_WEIGHT = 0.7;
+export const PAST_WORK_WEIGHT = 0.5; // worked there before (from LinkedIn work history)
 export const SAME_FIRM_WEIGHT = 0.95;
 
 /** Strength of a Form D role, by what the filer said the person does. */

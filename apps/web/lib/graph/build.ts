@@ -100,7 +100,8 @@ export async function buildTargetGraph(target: TargetInfo): Promise<Graph> {
     `${CONTACT_SELECT}
      WHERE c.workspace_id = $1 AND (
        (c.matched_person_id = ANY($2) AND c.match_status IN ('auto', 'possible', 'confirmed'))
-       OR c.company_firm_key = ANY($3))`,
+       OR c.company_firm_key = ANY($3)
+       OR EXISTS (SELECT 1 FROM user_contact_experience x WHERE x.contact_id = c.id AND x.company_firm_key = ANY($3)))`,
     [WORKSPACE_ID, personIds, [...firmKeys]],
   )).rows;
 

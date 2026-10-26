@@ -63,6 +63,22 @@ have actually met rank higher than address-book entries. The refresh token is AE
 encrypted at rest; *Disconnect* revokes it and deletes all Google-sourced contacts. For a hosted
 multi-user instance, Google requires app verification for these scopes.
 
+### LinkedIn agent (optional, opt-in)
+
+`apps/linkedin-agent` is a separate service (Playwright + Chromium). Off unless the operator sets
+`LINKEDIN_AGENT_ENABLED=true`; each user must tick three consent boxes. The user signs in to
+LinkedIn themselves in a live-view window (CDP screencast; their own password and 2FA), then the
+agent reads their 1st-degree connections and each connection's Experience section — one profile
+every 20–50 s, capped per day (default 120, max 200) — and the mapper uses that work history
+(current job 0.7, past job 0.5). Any login wall, checkpoint, or CAPTCHA stops the agent and asks
+the user to sign in again; it is never bypassed. Sessions are encrypted with
+`LINKEDIN_SESSION_KEY`, which only the agent holds (per-workspace HKDF key + workspace-bound
+AES-GCM), so the web app and database only see ciphertext.
+
+**This automates a LinkedIn account, which LinkedIn's User Agreement prohibits; accounts can be
+restricted.** See [DISCLAIMER.md](DISCLAIMER.md) §5. Test it against the bundled fake site
+(`pnpm fake-linkedin`, `LINKEDIN_BASE_URL=http://localhost:4010`), not a real account.
+
 Run locally: set `DATABASE_URL`, `ADMIN_PASSWORD`, `SESSION_SECRET` in `apps/web/.env.local`, then
 `cd apps/web && pnpm install && pnpm dev`. Tests: `pnpm test`.
 
