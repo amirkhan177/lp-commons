@@ -11,7 +11,8 @@ export interface GraphNode {
 }
 
 export type EdgeKind =
-  | "linkedin"   // you <-> contact
+  | "linkedin"   // you <-> contact (LinkedIn connection)
+  | "google"     // you <-> contact (Google contact / calendar meetings)
   | "match"      // contact <-> filing person (same human)
   | "works_at"   // contact <-> fund, via LinkedIn company = fund's firm
   | "role"       // filing person <-> fund, from a Form D
@@ -76,8 +77,8 @@ export function findPaths(graph: Graph, from: string, to: string, opts: PathOpti
       const next = e.source === at ? e.target : e.source;
       const s = score * e.weight;
       if (visited.has(next) || s < minScore) continue;
-      // The path must leave "you" through a LinkedIn connection; "you" is never re-entered.
-      if (at === from && e.kind !== "linkedin") continue;
+      // The path must leave "you" through one of your own connections; "you" is never re-entered.
+      if (at === from && e.kind !== "linkedin" && e.kind !== "google") continue;
       visited.add(next); nodes.push(next); edges.push(e);
       walk(next, s);
       visited.delete(next); nodes.pop(); edges.pop();

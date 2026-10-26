@@ -1,15 +1,7 @@
 import "server-only";
 import { db, WORKSPACE_ID } from "./db";
+import { linkedinStrength } from "./graph/weights";
 import { personKey, type LinkedInContact } from "./linkedin-csv";
-
-/** Strength of a direct LinkedIn connection, by how recently you connected. */
-export function connectionStrength(connectedOn: string | null, today = new Date()): number {
-  if (!connectedOn) return 0.6;
-  const years = (today.getTime() - new Date(connectedOn).getTime()) / (365.25 * 24 * 3600 * 1000);
-  if (years <= 2) return 0.9;
-  if (years <= 5) return 0.75;
-  return 0.6;
-}
 
 export async function importContacts(contacts: LinkedInContact[]): Promise<{ imported: number }> {
   const client = await db().connect();
@@ -36,7 +28,7 @@ export async function importContacts(contacts: LinkedInContact[]): Promise<{ imp
          VALUES ($1, $2, 'linkedin', $3, $4)
          ON CONFLICT (workspace_id, contact_id, kind) DO UPDATE SET strength = EXCLUDED.strength,
            evidence = EXCLUDED.evidence`,
-        [WORKSPACE_ID, rows[0].id, connectionStrength(c.connectedOn),
+        [WORKSPACE_ID, rows[0].id, linkedinStrength(c.connectedOn),
          JSON.stringify({ connected_on: c.connectedOn })],
       );
       imported++;

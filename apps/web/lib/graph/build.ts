@@ -1,14 +1,9 @@
 import "server-only";
 import { db, WORKSPACE_ID } from "../db";
 import type { Graph, GraphEdge, GraphNode } from "./paths";
+import { roleWeight, SAME_FIRM_WEIGHT } from "./weights";
+import { contactEdges, type ContactRow, CONTACT_SELECT } from "./contacts";
 
-// Relationship strength of a Form D role, by what the filer said the person does.
-function roleWeight(relationships: string[]): number {
-  return relationships.some((r) => r === "Executive Officer" || r === "Director") ? 1 : 0.8;
-}
-
-const WORKS_AT_WEIGHT = 0.7;
-const SAME_FIRM_WEIGHT = 0.95;
 const MAX_CO_FUNDS = 300;
 
 export interface TargetInfo {
@@ -101,14 +96,8 @@ export async function buildTargetGraph(target: TargetInfo): Promise<Graph> {
   });
 
   const personIds = [...node.keys()].filter((k) => k.startsWith("p:")).map((k) => Number(k.slice(2)));
-  type ContactRow = { id: number; first_name: string; last_name: string; company: string | null; position: string | null;
-                      company_firm_key: string | null; matched_person_id: number | null; match_status: string;
-                      match_confidence: number | null; strength: number; connected_on: string | null };
   const contacts = (await pool.query<ContactRow>(
-    `SELECT c.id, c.first_name, c.last_name, c.company, c.position, c.company_firm_key, c.matched_person_id,
-            c.match_status, c.match_confidence, COALESCE(ue.strength, 0.6) AS strength, c.connected_on::text
-     FROM user_contacts c
-     LEFT JOIN user_edges ue ON ue.contact_id = c.id AND ue.kind = 'linkedin'
+    `${CONTACT_SELECT}
      WHERE c.workspace_id = $1 AND (
        (c.matched_person_id = ANY($2) AND c.match_status IN ('auto', 'possible', 'confirmed'))
        OR c.company_firm_key = ANY($3))`,
@@ -125,22 +114,9 @@ export async function buildTargetGraph(target: TargetInfo): Promise<Graph> {
   }
 
   for (const c of contacts) {
-    const id = `c:${c.id}`;
-    const name = `${c.first_name} ${c.last_name}`.trim();
-    add({ id, kind: "contact", label: name, detail: [c.position, c.company].filter(Boolean).join(" · ") || undefined });
-    uniq.push({ source: "me", target: id, kind: "linkedin", weight: Number(c.strength),
-                evidence: `LinkedIn connection${c.connected_on ? " since " + c.connected_on : ""}` });
-    if (c.matched_person_id && node.has(`p:${c.matched_person_id}`)) {
-      const conf = Number(c.match_confidence ?? 0.5);
-      uniq.push({ source: id, target: `p:${c.matched_person_id}`, kind: "match", weight: conf,
-                  evidence: c.match_status === "possible"
-                    ? `Same name as a person in the filings (unconfirmed — verify)`
-                    : `Matched to filings by name${c.match_status === "confirmed" ? " (you confirmed)" : " and firm"}` });
-    }
-    for (const fund of (c.company_firm_key && fundsByFirm.get(c.company_firm_key)) || []) {
-      uniq.push({ source: id, target: fund, kind: "works_at", weight: WORKS_AT_WEIGHT,
-                  evidence: `LinkedIn: ${c.position ?? "works"} at ${c.company}` });
-    }
+    const { node: n, edges: es } = contactEdges(c, (pid) => node.has(`p:${pid}`), fundsByFirm);
+    add(n);
+    uniq.push(...es);
   }
   return { nodes: [...node.values()], edges: uniq };
 }

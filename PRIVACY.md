@@ -35,8 +35,9 @@ and independent instances run by other operators, are outside our control.
 
 ## 2. Private network data (yours, never shared)
 
-When you import your own network — for example a LinkedIn `Connections.csv` export, Clay
-enrichment results, or notes on intros — that data:
+When you import your own network — for example a LinkedIn `Connections.csv` export, Google
+contacts and calendar attendees (read-only OAuth; event titles and contents are never fetched),
+Clay enrichment results, or notes on intros — that data:
 
 - is stored only in **the database of the instance you use**;
 - is scoped to your workspace and is **never** included in public dataset exports or shared
@@ -46,7 +47,8 @@ enrichment results, or notes on intros — that data:
   own privacy policies then apply.
 
 You can delete your workspace's imported data at any time; deleting a workspace deletes its
-contacts and edges (`ON DELETE CASCADE`).
+contacts and edges (`ON DELETE CASCADE`). Disconnecting Google revokes access and deletes every
+Google-sourced contact. Integration tokens are encrypted at rest.
 
 ## 3. If you run your own instance
 

@@ -5,6 +5,7 @@ import { db, WORKSPACE_ID } from "@/lib/db";
 import { deleteAllContacts, importContacts, runMatching, setMatchDecision } from "@/lib/import";
 import { parseLinkedInConnections } from "@/lib/linkedin-csv";
 import { requireSession } from "@/lib/session";
+import { enqueueMapping } from "@/lib/agent/run";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -19,7 +20,8 @@ async function upload(formData: FormData) {
     const contacts = parseLinkedInConnections(await file.text());
     const { imported } = await importContacts(contacts);
     const { auto, possible } = await runMatching();
-    message = `Imported ${imported} connections. ${auto} matched to people in filings, ${possible} possible matches to review.`;
+    message = `Imported ${imported} connections. ${auto} matched to people in filings, ${possible} possible matches to review. Mapping your network in the background — you'll get a notification when it's ready.`;
+    await enqueueMapping("linkedin_import");
   } catch (e) {
     redirect("/import?error=" + encodeURIComponent(e instanceof Error ? e.message : "Import failed."));
   }
@@ -32,6 +34,7 @@ async function decide(formData: FormData) {
   await requireSession();
   const decision = formData.get("decision") === "confirmed" ? "confirmed" : "rejected";
   await setMatchDecision(Number(formData.get("contactId")), decision);
+  await enqueueMapping("match_review");
   revalidatePath("/import");
 }
 

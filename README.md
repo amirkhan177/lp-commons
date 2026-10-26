@@ -48,6 +48,21 @@ Name matches are deterministic in v1: same name **and** firm = matched; same uni
 "possible" (review on *Your network*). Your imported network stays in your instance's private
 tables and is never exported.
 
+### Background mapping agent
+
+After you import LinkedIn connections, sync Google, or review a match, a mapping run is queued and
+processed in the background (Postgres-backed queue, one run at a time, resumed after restarts). It
+computes your best intro path to **every active fund** (vintage ≥ 2016, non-SPV) at once and writes
+the results to *Reach*, then notifies you in-app — and by email if Resend is configured.
+
+### Google contacts & calendar (optional)
+
+Read-only OAuth (contacts, "other contacts" = people you've emailed, calendar events). Only names,
+emails, organizations and attendee lists are fetched — never event titles or contents. People you
+have actually met rank higher than address-book entries. The refresh token is AES-256-GCM
+encrypted at rest; *Disconnect* revokes it and deletes all Google-sourced contacts. For a hosted
+multi-user instance, Google requires app verification for these scopes.
+
 Run locally: set `DATABASE_URL`, `ADMIN_PASSWORD`, `SESSION_SECRET` in `apps/web/.env.local`, then
 `cd apps/web && pnpm install && pnpm dev`. Tests: `pnpm test`.
 
@@ -119,7 +134,8 @@ optional `FORMD_BACKFILL_FROM` (default `2016q1`).
 
 The `web` service builds `apps/web/Dockerfile` (root directory `apps/web`) with variables
 `DATABASE_URL=${{Postgres.DATABASE_URL}}` (private network only — the database has no public
-endpoint), `ADMIN_PASSWORD`, and `SESSION_SECRET`.
+endpoint), `ADMIN_PASSWORD`, `SESSION_SECRET`, `ENCRYPTION_KEY`, `APP_URL`, and optionally the
+Google and Resend variables from `.env.example`.
 
 ## Project docs
 
