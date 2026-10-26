@@ -126,3 +126,18 @@ def test_normalize_helpers():
     assert is_org_related_person("Example Ventures GP II, LLC", "N/A")
     assert is_org_related_person("Acme", "Partners")
     assert not is_org_related_person("Jane", "Doe")
+
+
+def test_parse_bulk_listing_picks_real_paths_and_latest_revision():
+    html = """
+      <a href="/files/datastandardsinnovation/data/form-d-data-sets/2026q3_d.zip">2026 Q3</a>
+      <a href="/files/structureddata/data/form-d-data-sets/2008q3_d.zip">2008 Q3</a>
+      <a href="/files/structureddata/data/form-d-data-sets/2008q3_d_0.zip">2008 Q3 (revised)</a>
+      <a href="https://www.sec.gov/files/structureddata/data/form-d-data-sets/2016Q1_d.zip">2016 Q1</a>
+      <a href="/files/other/readme.pdf">readme</a>
+    """
+    assert formd.parse_bulk_listing(html) == {
+        (2026, 3): "https://www.sec.gov/files/datastandardsinnovation/data/form-d-data-sets/2026q3_d.zip",
+        (2008, 3): "https://www.sec.gov/files/structureddata/data/form-d-data-sets/2008q3_d_0.zip",
+        (2016, 1): "https://www.sec.gov/files/structureddata/data/form-d-data-sets/2016Q1_d.zip",
+    }

@@ -1,6 +1,6 @@
 """Form D: SEC quarterly bulk data sets + per-filing primary_doc.xml.
 
-Bulk:  https://www.sec.gov/files/structureddata/data/form-d-data-sets/{YYYY}q{N}_d.zip
+Bulk:  zips linked from https://www.sec.gov/data-research/sec-markets-data/form-d-data-sets
        (FORMDSUBMISSION, ISSUERS, OFFERING, RELATEDPERSONS ... .tsv)
 Daily: https://www.sec.gov/Archives/edgar/daily-index/{YYYY}/QTR{N}/master.{YYYYMMDD}.idx
        then https://www.sec.gov/Archives/edgar/data/{cik}/{accession-no-dashes}/primary_doc.xml
@@ -20,7 +20,10 @@ from decimal import Decimal
 
 from ..normalize import clean, parse_amount, parse_bool, parse_date, parse_int
 
-BULK_URL = "https://www.sec.gov/files/structureddata/data/form-d-data-sets/{year}q{q}_d.zip"
+# Zip paths vary by quarter (different directories, "_0" re-upload suffixes), so URLs
+# are read from SEC's listing page rather than built from a pattern.
+BULK_LISTING_URL = "https://www.sec.gov/data-research/sec-markets-data/form-d-data-sets"
+_BULK_HREF = re.compile(r'href="([^"]*/(\d{4})q([1-4])_d(?:_(\d+))?\.zip)"', re.I)
 DAILY_INDEX_URL = "https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR{q}/master.{ymd}.idx"
 FILING_INDEX_URL = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc_nodash}/{acc}-index.htm"
 PRIMARY_DOC_URL = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc_nodash}/primary_doc.xml"
@@ -97,8 +100,15 @@ def classify(industry_group: str | None, fund_type: str | None, entity_name: str
 # Bulk quarterly data sets
 # ---------------------------------------------------------------------------
 
-def quarter_url(year: int, q: int) -> str:
-    return BULK_URL.format(year=year, q=q)
+def parse_bulk_listing(html: str) -> dict[tuple[int, int], str]:
+    """{(year, quarter): absolute zip URL}. If a quarter has several files, keep the highest _N revision."""
+    best: dict[tuple[int, int], tuple[int, str]] = {}
+    for href, year, q, rev in _BULK_HREF.findall(html):
+        key, rank = (int(year), int(q)), int(rev) if rev else -1
+        url = href if href.startswith("http") else "https://www.sec.gov" + href
+        if key not in best or rank > best[key][0]:
+            best[key] = (rank, url)
+    return {k: url for k, (_, url) in best.items()}
 
 
 def _read_tsv(zf: zipfile.ZipFile, table: str) -> list[dict[str, str]]:

@@ -29,6 +29,15 @@ It does **not** name LPs. We keep only:
 
 GP entities listed as related persons (e.g. "Acme GP, LLC" / "N/A") are not stored as people.
 
+Focus: **active funds since 2016** — the `active_funds` view (vintage ≥ 2016, and a Form D / D/A
+filed in the last 18 months; issuers must amend annually while still raising). Backfill starts at
+2016q1. Bulk zip URLs are read from SEC's
+[Form D data sets page](https://www.sec.gov/data-research/sec-markets-data/form-d-data-sets),
+since paths differ by quarter.
+
+Family offices and CVCs don't identify themselves on Form D; they come from other sources in P1
+(13F / Form ADV for family offices, curated CVC list matched to corporate parents).
+
 ## SEC fair access
 
 Every request sends `SEC_USER_AGENT` (must contain a contact email — SEC returns 403
@@ -72,7 +81,7 @@ backfills any missing bulk quarters, then processes new daily indexes. Every ste
 recorded in `ingest_state`, so runs are resumable and idempotent.
 
 Scraper variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SEC_USER_AGENT`,
-optional `FORMD_BACKFILL_FROM` (default `2009q1`).
+optional `FORMD_BACKFILL_FROM` (default `2016q1`).
 
 ## License
 

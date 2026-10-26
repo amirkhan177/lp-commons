@@ -3,6 +3,7 @@
 from datetime import date
 
 import httpx
+import pytest
 
 from helpers import bulk_zip, filing
 from lpmap import db, pipeline
@@ -56,6 +57,26 @@ def test_newer_filing_renames_entity_older_does_not(conn, fixtures):
         ("Example Ventures Fund II, LP", ["Example Ventures Fund II, L.P."])
 
 
+LISTING_TMPL = '<a href="{}">{}</a>'
+SD = "/files/structureddata/data/form-d-data-sets/"
+DSI = "/files/datastandardsinnovation/data/form-d-data-sets/"
+
+
+def listing(*paths: str) -> bytes:
+    return ("<ul>" + "".join(LISTING_TMPL.format(p, p) for p in paths) + "</ul>").encode()
+
+
+def _sec(routes: dict, requested: list | None = None) -> SecClient:
+    def handler(req: httpx.Request):
+        url = str(req.url)
+        if requested is not None:
+            requested.append(url)
+        return httpx.Response(200, content=routes[url]) if url in routes else httpx.Response(404)
+
+    return SecClient(UA, transport=httpx.MockTransport(handler), sleep=lambda s: None,
+                     limiter=RateLimiter(10, sleep=lambda s: None))
+
+
 def test_sync_backfills_quarters_then_daily(conn, fixtures):
     q3 = bulk_zip([filing("0000000001-25-000001", 1, "Seed Ventures Fund I, L.P.", filed="15-AUG-2025"),
                    filing("0000000002-25-000001", 2, "Macro LP", fund_type="Hedge Fund")])
@@ -64,39 +85,61 @@ def test_sync_backfills_quarters_then_daily(conn, fixtures):
     vc_xml = (fixtures / "primary_doc_vc.xml").read_bytes()
     hedge_xml = vc_xml.replace(b"Venture Capital Fund", b"Hedge Fund")
     requested = []
+    sec = _sec({
+        formd.BULK_LISTING_URL: listing(DSI + "2025q3_d.zip", DSI + "2025q3_d_0.zip", SD + "2025q2_d.zip",
+                                        SD + "2025q1_d.zip"),
+        "https://www.sec.gov" + DSI + "2025q3_d_0.zip": q3,
+        "https://www.sec.gov" + SD + "2025q2_d.zip": q2,
+        formd.daily_index_url(date(2025, 10, 1)): idx.encode(),
+        _entry().primary_doc_url: vc_xml,
+        "https://www.sec.gov/Archives/edgar/data/1999002/000199900225000001/primary_doc.xml": hedge_xml,
+    }, requested)
 
-    def handler(req: httpx.Request):
-        url = str(req.url)
-        requested.append(url)
-        routes = {
-            formd.quarter_url(2025, 2): q2,
-            formd.quarter_url(2025, 3): q3,
-            formd.daily_index_url(date(2025, 10, 1)): idx.encode(),
-            _entry().primary_doc_url: vc_xml,
-            "https://www.sec.gov/Archives/edgar/data/1999002/000199900225000001/primary_doc.xml": hedge_xml,
-        }
-        return httpx.Response(200, content=routes[url]) if url in routes else httpx.Response(404)
-
-    sec = SecClient(UA, transport=httpx.MockTransport(handler), sleep=lambda s: None,
-                    limiter=RateLimiter(10, sleep=lambda s: None))
     stats = pipeline.sync(conn, sec, "2025q2", today=date(2025, 10, 3))
-    assert stats["quarters"] == {"2025q2": 1, "2025q3": 1}
+    assert stats["quarters"] == {"2025q2": 1, "2025q3": 1}  # 2025q1 is before backfill_from
     assert stats["days"] == {"2025-10-01": 1, "2025-10-02": None}
-    assert formd.quarter_url(2025, 4) not in requested  # running quarter is never fetched
+    assert not any(u.endswith("2025q1_d.zip") or u.endswith("2025q3_d.zip") for u in requested)
 
     s = pipeline.status(conn)
     assert (s["vc_funds"], s["fofs"], s["filings"], s["bulk_quarters_done"]) == (2, 1, 3, 2)
     assert s["latest_daily_index"] == "2025-10-01"
 
-    # Second run: nothing left except the still-missing 2025-10-02 index.
+    # Second run: only the listing and the still-missing 2025-10-02 index.
     requested.clear()
     stats = pipeline.sync(conn, sec, "2025q2", today=date(2025, 10, 3))
     assert stats == {"quarters": {}, "days": {"2025-10-02": None}}
-    assert requested == [formd.daily_index_url(date(2025, 10, 2))]
+    assert requested == [formd.BULK_LISTING_URL, formd.daily_index_url(date(2025, 10, 2))]
 
 
 def test_sync_max_quarters_defers_daily(conn):
-    sec = SecClient(UA, transport=httpx.MockTransport(lambda r: httpx.Response(404)), sleep=lambda s: None,
-                    limiter=RateLimiter(10, sleep=lambda s: None))
+    empty = bulk_zip([])
+    paths = [SD + f"{y}q{q}_d.zip" for y in (2024, 2025) for q in (1, 2, 3, 4)]
+    sec = _sec({formd.BULK_LISTING_URL: listing(*paths), **{"https://www.sec.gov" + p: empty for p in paths}})
     stats = pipeline.sync(conn, sec, "2024q1", today=date(2025, 10, 3), max_quarters=2)
-    assert list(stats["quarters"]) == ["2024q1", "2024q2"] and stats["days"] == {}
+    assert stats == {"quarters": {"2024q1": 0, "2024q2": 0}, "days": {}}
+
+
+def test_sync_refuses_empty_listing(conn):
+    sec = _sec({formd.BULK_LISTING_URL: b"<html>redesigned page</html>"})
+    with pytest.raises(RuntimeError, match="no Form D data set links"):
+        pipeline.sync(conn, sec, "2024q1", today=date(2025, 10, 3))
+
+
+def test_active_funds_view(conn):
+    today = date.today()
+    recent = today.replace(day=1)
+
+    def make(acc, cik, name, filed, first_sale):
+        f = formd.FormDFiling(accession_number=acc, cik=cik, entity_name=name, submission_type="D", filed_at=filed,
+                              industry_group="Pooled Investment Fund", investment_fund_type="Venture Capital Fund",
+                              date_of_first_sale=first_sale)
+        db.upsert_filing(conn, f)
+
+    make("1-1", 1, "New Active Fund I", recent, date(2022, 5, 1))          # active, 2022 vintage
+    make("2-1", 2, "Old Fund Still Filing", recent, date(2014, 1, 1))      # active but pre-2016 vintage
+    make("3-1", 3, "Stale Fund II", date(2019, 3, 1), date(2018, 6, 1))    # 2018 vintage, no recent filing
+    make("4-1", 4, "Raising Fund III", date(2023, 1, 10), None)            # first filing 2023 ...
+    make("4-2", 4, "Raising Fund III", recent, None)                       # ... amended recently
+    conn.commit()
+    rows = conn.execute("SELECT name, vintage, filing_count FROM active_funds ORDER BY cik").fetchall()
+    assert rows == [("New Active Fund I", 2022, 1), ("Raising Fund III", 2023, 2)]

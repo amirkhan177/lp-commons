@@ -39,8 +39,12 @@ def main(argv: list[str] | None = None) -> int:
             if args.cmd == "sync":
                 stats = pipeline.sync(conn, sec, cfg.formd_backfill_from, max_quarters=args.max_quarters)
             elif args.cmd == "quarter":
-                y, qn = pipeline.parse_quarter(args.quarter)
-                stats = {args.quarter: pipeline.ingest_quarter(conn, sec, y, qn)}
+                yq = pipeline.parse_quarter(args.quarter)
+                url = pipeline.bulk_urls(sec).get(yq)
+                if url is None:
+                    print(f"{args.quarter} is not published on SEC's Form D data sets page", file=sys.stderr)
+                    return 1
+                stats = {args.quarter: pipeline.ingest_quarter(conn, sec, *yq, url)}
             else:
                 stats = {args.day.isoformat(): pipeline.ingest_day(conn, sec, args.day)}
         print(json.dumps({"run": stats, "status": pipeline.status(conn)}, default=str, indent=2))

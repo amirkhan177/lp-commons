@@ -40,14 +40,18 @@ def quarter_end(y: int, q: int) -> date:
     return (date(y + 1, 1, 1) if q == 4 else date(y, 3 * q + 1, 1)) - timedelta(days=1)
 
 
-def ingest_quarter(conn: psycopg.Connection, sec: SecClient, y: int, q: int) -> int | None:
-    """Returns number of kept filings, or None if SEC hasn't published this quarter yet."""
-    url = formd.quarter_url(y, q)
-    try:
-        data = sec.get(url).content
-    except NotFound:
-        return None
-    filings = formd.parse_bulk_zip(data)
+def bulk_urls(sec: SecClient) -> dict[tuple[int, int], str]:
+    urls = formd.parse_bulk_listing(sec.get(formd.BULK_LISTING_URL).text)
+    if not urls:
+        # Fail loudly: silently treating every quarter as unpublished would push the
+        # whole history onto the (far slower) daily-index path.
+        raise RuntimeError(f"no Form D data set links found on {formd.BULK_LISTING_URL}")
+    return urls
+
+
+def ingest_quarter(conn: psycopg.Connection, sec: SecClient, y: int, q: int, url: str) -> int:
+    """Returns number of kept filings."""
+    filings = formd.parse_bulk_zip(sec.get(url).content)
     for f in filings:
         db.upsert_filing(conn, f)
     db.mark(conn, BULK_SOURCE, f"{y}q{q}", "done", {"kept": len(filings), "url": url})
@@ -89,15 +93,18 @@ def sync(conn: psycopg.Connection, sec: SecClient, backfill_from: str, today: da
     loaded_through: date | None = None
     stats = {"quarters": {}, "days": {}}
 
-    # The bulk set for the running quarter never exists yet.
-    pending = [yq for yq in quarters_between(parse_quarter(backfill_from), current)
-               if yq != current and f"{yq[0]}q{yq[1]}" not in done]
+    urls = bulk_urls(sec)
+    wanted = quarters_between(parse_quarter(backfill_from), current)
+    for yq in wanted:
+        if yq not in urls and yq != current:
+            log.info("bulk %sq%s: not published", *yq)
+    pending = [yq for yq in wanted if yq in urls and f"{yq[0]}q{yq[1]}" not in done]
     deferred = []
     if max_quarters is not None:
         pending, deferred = pending[:max_quarters], pending[max_quarters:]
     for y, q in pending:
-        n = ingest_quarter(conn, sec, y, q)
-        log.info("bulk %sq%s: %s", y, q, "not published yet" if n is None else f"{n} VC/FoF filings")
+        n = ingest_quarter(conn, sec, y, q, urls[(y, q)])
+        log.info("bulk %sq%s: %d VC/FoF filings", y, q, n)
         stats["quarters"][f"{y}q{q}"] = n
     if deferred:
         log.info("%d bulk quarters left for later runs; skipping daily catch-up", len(deferred))

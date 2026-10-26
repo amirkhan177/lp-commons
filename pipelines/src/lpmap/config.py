@@ -45,5 +45,5 @@ def load() -> Config:
         sec_user_agent=validate_user_agent(ua),
         sec_max_rps=rps,
         database_url=db,
-        formd_backfill_from=os.environ.get("FORMD_BACKFILL_FROM", "2009q1").lower(),
+        formd_backfill_from=os.environ.get("FORMD_BACKFILL_FROM", "2016q1").lower(),
     )
