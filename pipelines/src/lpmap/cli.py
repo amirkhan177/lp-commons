@@ -19,6 +19,7 @@ def main(argv: list[str] | None = None) -> int:
     d = sub.add_parser("day", help="load one daily index, e.g. 2025-10-01")
     d.add_argument("day", type=date.fromisoformat)
     sub.add_parser("status", help="print row counts")
+    sub.add_parser("reprocess", help="re-ingest all Form D history (after parser changes); safe, idempotent")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -38,6 +39,10 @@ def main(argv: list[str] | None = None) -> int:
         with SecClient(cfg.sec_user_agent, cfg.sec_max_rps) as sec:
             if args.cmd == "sync":
                 stats = pipeline.sync(conn, sec, cfg.formd_backfill_from, max_quarters=args.max_quarters)
+            elif args.cmd == "reprocess":
+                conn.execute("DELETE FROM ingest_state WHERE source IN (%s, %s)", (pipeline.BULK_SOURCE, pipeline.DAILY_SOURCE))
+                conn.commit()
+                stats = pipeline.sync(conn, sec, cfg.formd_backfill_from)
             elif args.cmd == "quarter":
                 yq = pipeline.parse_quarter(args.quarter)
                 url = pipeline.bulk_urls(sec).get(yq)

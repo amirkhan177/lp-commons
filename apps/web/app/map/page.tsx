@@ -37,7 +37,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
             )}
             <form method="get" action="/map" className="hud-search">
               <span aria-hidden>&gt;</span>
-              <input type="search" name="q" defaultValue={q} placeholder="Search a fund or fund-of-funds" aria-label="Search funds" autoComplete="off" />
+              <input type="search" name="q" defaultValue={q} placeholder="Search a fund or its management company" aria-label="Search funds" autoComplete="off" />
             </form>
             {hits.length > 0 && (
               <div className="hud-panel">
@@ -50,6 +50,12 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
                       {h.is_active && <span className="badge ok">active</span>}
                       {h.is_spv && <span className="badge warn">SPV</span>}
                       <div className="muted small">{[h.state, h.vintage && `vintage ${h.vintage}`, h.total_offering_amount && `raising ${money(h.total_offering_amount)}`].filter(Boolean).join(" · ")}</div>
+                      {h.managers.length > 0 && (
+                        <div className="small" style={{ color: h.via_manager ? "var(--hud-amber)" : "var(--hud-muted)" }}>
+                          Managed by {h.managers.slice(0, 2).map((m) => m.name).join(" · ")}
+                          {h.managers.length > 2 && ` +${h.managers.length - 2}`}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -79,6 +85,16 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
                     <div className="dossier-cell"><small>Investors</small><b>{t.num_investors ?? "—"}</b></div>
                     <div className="dossier-cell"><small>Status</small><b style={{ color: t.is_active ? "var(--hud-green)" : "var(--hud-muted)" }}>{t.is_active ? "Raising" : "Quiet"}</b></div>
                   </div>
+                  {t.managers.length > 0 && (
+                    <div className="small" style={{ marginTop: 12 }}>
+                      {t.managers.map((m) => (
+                        <div key={m.name}>
+                          <span className="hud-kicker" style={{ marginRight: 8 }}>{m.role === "manager" ? "Management co." : "General partner"}</span>
+                          {m.url ? <a href={m.url} target="_blank" rel="noreferrer">{m.name}</a> : m.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {raised != null && <div className="gauge" title={`${Math.round(raised * 100)}% of raise goal raised`}><i style={{ width: `${raised * 100}%` }} /></div>}
                   <div className="small muted" style={{ marginTop: 10 }}>
                     <a href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${t.cik}&type=D`} target="_blank" rel="noreferrer">Source: SEC EDGAR filings ↗</a>

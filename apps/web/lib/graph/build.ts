@@ -17,12 +17,17 @@ export interface TargetInfo {
   total_offering_amount: string | null;
   total_amount_sold: string | null;
   num_investors: number | null;
+  managers: { name: string; role: "manager" | "general_partner"; url: string | null }[];
 }
+
+const MANAGERS_JSON = `COALESCE((SELECT json_agg(json_build_object('name', m.manager_name, 'role', m.role, 'url', m.source_url)
+                                    ORDER BY m.role DESC, m.manager_name)
+                     FROM fund_manager_names m WHERE m.fund_entity_id = e.id), '[]')`;
 
 export async function getTarget(entityId: number): Promise<TargetInfo | null> {
   const { rows } = await db().query<TargetInfo>(
     `SELECT e.id, e.name, e.firm_key, e.cik, e.state, fp.vintage, fp.is_active,
-            fp.total_offering_amount, fp.total_amount_sold, fp.num_investors
+            fp.total_offering_amount, fp.total_amount_sold, fp.num_investors, ${MANAGERS_JSON} AS managers
      FROM entities e LEFT JOIN fund_profiles fp ON fp.entity_id = e.id WHERE e.id = $1`,
     [entityId],
   );
@@ -131,24 +136,36 @@ export interface FundHit {
   is_active: boolean;
   total_offering_amount: string | null;
   is_spv: boolean;
+  managers: { name: string; role: "manager" | "general_partner" }[];
+  via_manager: boolean; // matched because its management company / GP matched the query
 }
 
+/** Funds whose own name, or whose management company / GP name, matches the query. */
 export async function searchFunds(q: string): Promise<FundHit[]> {
   const like = q.replace(/[\\%_]/g, (m) => "\\" + m);
   const key = q.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
   const { rows } = await db().query<FundHit>(
-    `WITH hits AS (
-       SELECT id FROM entities
+    `WITH by_name AS (
+       SELECT id, false AS via_manager FROM entities
        WHERE type IN ('vc_fund', 'fof') AND (name ILIKE '%' || $1 || '%' OR name_normalized % $2)
        ORDER BY (name ILIKE $1 || '%') DESC, similarity(name_normalized, $2) DESC
        LIMIT 100
+     ), by_manager AS (
+       SELECT DISTINCT m.fund_entity_id AS id, true AS via_manager
+       FROM entities mg JOIN fund_managers m ON m.manager_entity_id = mg.id
+       WHERE mg.type = 'gp_firm' AND (mg.name ILIKE '%' || $1 || '%' OR mg.name_normalized % $2)
+       LIMIT 100
+     ), hits AS (
+       SELECT id, bool_and(via_manager) AS via_manager FROM (SELECT * FROM by_name UNION ALL SELECT * FROM by_manager) u
+       GROUP BY id
      )
-     SELECT entity_id, name, type, state, vintage, is_active, total_offering_amount,
-            name ~* '(a series of|\\mspv\\M)' AS is_spv
-     FROM fund_profiles
-     WHERE entity_id IN (SELECT id FROM hits)
-     ORDER BY (name ILIKE ($1 || '%')) DESC, is_active DESC, similarity(lower(name), $2) DESC
-     LIMIT 25`,
+     SELECT fp.entity_id, fp.name, fp.type, fp.state, fp.vintage, fp.is_active, fp.total_offering_amount,
+            fp.name ~* '(a series of|\\mspv\\M)' AS is_spv, h.via_manager,
+            COALESCE((SELECT json_agg(json_build_object('name', m.manager_name, 'role', m.role) ORDER BY m.role DESC)
+                      FROM fund_manager_names m WHERE m.fund_entity_id = fp.entity_id), '[]') AS managers
+     FROM fund_profiles fp JOIN hits h ON h.id = fp.entity_id
+     ORDER BY (fp.name ILIKE ($1 || '%')) DESC, fp.is_active DESC, h.via_manager, similarity(lower(fp.name), $2) DESC
+     LIMIT 40`,
     [like, key],
   );
   return rows;

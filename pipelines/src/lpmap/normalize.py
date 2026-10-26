@@ -41,6 +41,48 @@ def is_org_related_person(first: str | None, last: str | None) -> bool:
     return bool(_ORG_WORDS.search(full)) or (clean(last) or "").lower() in _PLACEHOLDER
 
 
+_SUFFIX_ONLY = re.compile(r"^(llc|l\.l\.c\.?|lp|l\.p\.?|llp|inc\.?|ltd\.?|limited|corp\.?|co\.?)$", re.I)
+
+
+def org_name(first: str | None, middle: str | None, last: str | None) -> str | None:
+    """Rebuild an organization's name from Form D's person-shaped fields.
+
+    Filers squeeze names in oddly: ('N/A', 'Acme GP, LLC'), ('Seed Labs', 'LLC'), ('LLC', 'Sydecar').
+    """
+    junk = lambda x: x.lower() in _PLACEHOLDER or x.lower() in {"(none)", "none."} or not re.search(r"[a-z0-9]", x, re.I)
+    parts = [x for x in (clean(first), clean(middle), clean(last)) if x and not junk(x)]
+    if not parts:
+        return None
+    if len(parts) == 2 and _SUFFIX_ONLY.match(parts[0]):
+        parts = [parts[1], parts[0]]           # ('LLC', 'Sydecar') -> 'Sydecar LLC'
+    name = " ".join(parts)
+    name = re.sub(r"\s+(llc|lp|llp|inc|ltd)\b\.?$", lambda m: ", " + m.group(1).upper(), name, flags=re.I)
+    return re.sub(r",\s*,", ",", name).strip(" ,")
+
+
+_MANAGER = re.compile(r"\b(investment\s+(manager|adviser|advisor)|management\s+company|manager\b|adviser|advisor)", re.I)
+_GP = re.compile(r"\b(general\s+partner|managing\s+member|\bgp\b)", re.I)
+_PLATFORM = re.compile(r"\b(administrator|agent\s+of|fund\s+admin|custodian|placement|broker)", re.I)
+_GENERIC = re.compile(r"^(fund\s+gp|series\s+gp|gp)\b|\bspv\b|\badmin(istrat\w*)?\b", re.I)
+
+
+def manager_role(clarification: str | None, name: str) -> str | None:
+    """'manager' or 'general_partner' for real fund managers; None for platform admins and placeholders."""
+    text = clean(clarification) or ""
+    if _PLATFORM.search(text) or _GENERIC.search(name):
+        return None
+    if _GP.search(text):
+        return "general_partner"
+    if _MANAGER.search(text):
+        return "manager"
+    # No clarification: fall back to what the name says.
+    if re.search(r"\b(management|advisors|advisers|capital\s+partners)\b", name, re.I):
+        return "manager"
+    if re.search(r"\bgp\b|general\s+partner", name, re.I):
+        return "general_partner"
+    return None
+
+
 def parse_date(value: str | None) -> date | None:
     value = clean(value)
     if not value:

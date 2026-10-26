@@ -29,7 +29,7 @@ def test_upsert_filing_is_idempotent_and_skips_org_persons(conn, fixtures):
     counts = conn.execute(
         "SELECT (SELECT count(*) FROM entities), (SELECT count(*) FROM formd_filings), "
         "(SELECT count(*) FROM people), (SELECT count(*) FROM roles)").fetchone()
-    assert counts == (1, 1, 1, 1)  # GP LLC listed as related person is not a person
+    assert counts == (2, 1, 1, 1)  # fund + its GP LLC (a manager entity, not a person)
     person = conn.execute("SELECT full_name, name_normalized, state FROM people").fetchone()
     assert person == ("Jane Q Doe", "jane doe", "CA")
     row = conn.execute("SELECT name, total_offering_amount, num_investors, federal_exemptions, fund_category "
@@ -143,3 +143,30 @@ def test_active_funds_view(conn):
     conn.commit()
     rows = conn.execute("SELECT name, vintage, filing_count FROM active_funds ORDER BY cik").fetchall()
     assert rows == [("New Active Fund I", 2022, 1), ("Raising Fund III", 2023, 2)]
+
+
+def test_managers_linked_and_spv_admins_skipped(conn):
+    def fd(acc, cik, name, persons):
+        return formd.FormDFiling(
+            accession_number=acc, cik=cik, entity_name=name, submission_type="D", filed_at=date(2026, 2, 1),
+            industry_group="Pooled Investment Fund", investment_fund_type="Venture Capital Fund",
+            related_persons=[formd.RelatedPerson(f, None, l, "San Francisco", "CA", ["Executive Officer"], c)
+                             for f, l, c in persons])
+    db.upsert_filing(conn, fd("1-1", 1, "GC Venture XII, L.P.", [
+        ("N/A", "General Catalyst Group Management, LLC", "Investment manager of the Issuer"),
+        ("Jane", "Doe", None)]))
+    db.upsert_filing(conn, fd("2-1", 2, "GC Venture XIII, L.P.", [
+        ("N/A", "General Catalyst Group Management, LLC", "Investment manager of the Issuer")]))
+    db.upsert_filing(conn, fd("3-1", 3, "Deal 7, a series of Roll Up Vehicles, LP", [
+        ("N/A", "Belltower Fund Group, Ltd.", "Agent of the general partner of the Issuer")]))
+    conn.commit()
+    rows = conn.execute(
+        "SELECT f.name, manager_name, role FROM fund_manager_names m JOIN entities f ON f.id = m.fund_entity_id "
+        ).fetchall()
+    assert sorted(rows) == [("GC Venture XII, L.P.", "General Catalyst Group Management, LLC", "manager"),
+                    ("GC Venture XIII, L.P.", "General Catalyst Group Management, LLC", "manager")]
+    assert conn.execute("SELECT count(*) FROM entities WHERE type = 'gp_firm'").fetchone()[0] == 1
+    assert conn.execute("SELECT count(*) FROM people").fetchone()[0] == 1  # Jane, not the company
+    # Firm keys ignore management-company words.
+    assert conn.execute("SELECT lpc_firm_key('Acme Capital Management, LLC'), lpc_firm_key('Acme Capital Fund II, L.P.')"
+                        ).fetchone() == ("acme capital", "acme capital")

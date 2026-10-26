@@ -5,7 +5,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from .config import MIGRATIONS_DIR
-from .normalize import is_org_related_person, name_key, person_key, person_name
+from .normalize import is_org_related_person, manager_role, name_key, org_name, person_key, person_name
 from .sources.formd import FormDFiling, classify
 
 log = logging.getLogger(__name__)
@@ -93,10 +93,16 @@ def upsert_filing(conn: psycopg.Connection, f: FormDFiling) -> None:
          f.finders_fees, f.source, f.source_url),
     )
 
+    single_deal = "a series of" in f.entity_name.lower()
     for rp in f.related_persons:
+        if is_org_related_person(rp.first_name, rp.last_name):
+            # SPV platforms list administrators and generic GPs, not a fund's real manager.
+            if not single_deal:
+                upsert_manager(conn, entity_id, f, rp)
+            continue
         key = person_key(rp.first_name, rp.last_name)
-        if not key or is_org_related_person(rp.first_name, rp.last_name):
-            continue  # GP entities get linked as gp_firm entities in P1
+        if not key:
+            continue
         person_id = conn.execute(
             """
             INSERT INTO people (full_name, name_normalized, first_name, middle_name, last_name, city, state)
@@ -117,6 +123,33 @@ def upsert_filing(conn: psycopg.Connection, f: FormDFiling) -> None:
             (person_id, entity_id, rp.relationships, rp.clarification, f.accession_number, f.source_url,
              f.filed_at),
         )
+
+
+def upsert_manager(conn: psycopg.Connection, fund_id: int, f: FormDFiling, rp) -> None:
+    name = org_name(rp.first_name, rp.middle_name, rp.last_name)
+    role = manager_role(rp.clarification, name) if name else None
+    if not name or not role or len(name_key(name)) < 3:
+        return
+    manager_id = conn.execute(
+        """
+        INSERT INTO entities (type, name, name_normalized, city, state)
+        VALUES ('gp_firm', %s, %s, %s, %s)
+        ON CONFLICT (name_normalized) WHERE type = 'gp_firm' DO UPDATE SET
+            city = COALESCE(entities.city, EXCLUDED.city), state = COALESCE(entities.state, EXCLUDED.state)
+        RETURNING id
+        """,
+        (name, name_key(name), rp.city, rp.state),
+    ).fetchone()[0]
+    conn.execute(
+        """
+        INSERT INTO fund_managers (fund_entity_id, manager_entity_id, role, relationships, clarification,
+                                   source_ref, source_url, filed_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (fund_entity_id, manager_entity_id, source_ref) DO UPDATE SET
+            role = EXCLUDED.role, relationships = EXCLUDED.relationships, clarification = EXCLUDED.clarification
+        """,
+        (fund_id, manager_id, role, rp.relationships, rp.clarification, f.accession_number, f.source_url, f.filed_at),
+    )
 
 
 def mark(conn: psycopg.Connection, source: str, key: str, status: str, detail: dict | None = None) -> None:

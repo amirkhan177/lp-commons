@@ -141,3 +141,33 @@ def test_parse_bulk_listing_picks_real_paths_and_latest_revision():
         (2008, 3): "https://www.sec.gov/files/structureddata/data/form-d-data-sets/2008q3_d_0.zip",
         (2016, 1): "https://www.sec.gov/files/structureddata/data/form-d-data-sets/2016Q1_d.zip",
     }
+
+
+@pytest.mark.parametrize("first,middle,last,expected", [
+    ("N/A", None, "General Catalyst Group Management, LLC", "General Catalyst Group Management, LLC"),
+    ("Seed Labs", None, "LLC", "Seed Labs, LLC"),
+    ("LLC", None, "Sydecar", "Sydecar, LLC"),
+    ("-.", None, "US HMC Series GP LLC", "US HMC Series GP, LLC"),
+    ("(none)", None, "Kamerra Holdings, LLC", "Kamerra Holdings, LLC"),
+    ("N/A", None, "-", None),
+])
+def test_org_name(first, middle, last, expected):
+    from lpmap.normalize import org_name
+    assert org_name(first, middle, last) == expected
+
+
+@pytest.mark.parametrize("clarification,name,expected", [
+    ("Investment manager of the Issuer", "General Catalyst Group Management, LLC", "manager"),
+    ("General Partner of the Issuer", "Rice Capital Fund GP I, LLC", "general_partner"),
+    ("Managing Member of the Issuer.", "Acme Ventures, LLC", "general_partner"),
+    ("Administrator of the Issuer", "Sydecar LLC", None),
+    ("Agent of the general partner of the Issuer", "Belltower Fund Group, LTD", None),
+    ("General partner of the Issuer", "Fund GP, LLC", None),
+    ("Managing Member of the Issuer.", "Viva SPV GP, LLC", None),
+    ("General Partner of the Issuer", "Finally Fund Admin, LLC", None),
+    (None, "Acme Capital Management, LLC", "manager"),
+    (None, "Square Start, LLC", None),
+])
+def test_manager_role(clarification, name, expected):
+    from lpmap.normalize import manager_role
+    assert manager_role(clarification, name) == expected

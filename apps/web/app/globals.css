@@ -364,3 +364,4 @@ html, body { background: #03070c; color-scheme: dark; }
 .act-alt { margin-top: 12px; }
 .act-alt summary { cursor: pointer; font-size: 12px; letter-spacing: 0.08em; color: var(--hud-cyan-dim); text-transform: uppercase; }
 .act-alt summary:hover { color: var(--hud-cyan); }
+.hud .hud-search input[type="search"] { border: 0; background: transparent; box-shadow: none; outline: none; }
