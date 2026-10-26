@@ -268,3 +268,41 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: 
   .boot span { animation: none; opacity: 1; }
 }
 @media (max-width: 860px) { .hud-stage { height: 420px; } }
+
+/* ---- Onboarding (HUD) ---- */
+.ob-head { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; margin: 8px 0 24px; }
+.ob-head h1 { font-family: var(--hud-display); text-transform: uppercase; letter-spacing: 0.14em; font-size: clamp(20px, 3vw, 30px); margin: 6px 0; color: #fff; }
+.ob-ring { position: relative; width: 112px; height: 112px; }
+.ob-ring svg { transform: rotate(-90deg); }
+.ob-ring .pct { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--hud-display); font-size: 22px; color: #fff; text-shadow: 0 0 12px var(--hud-cyan); }
+.ob-ring .pct small { display: block; font-family: var(--hud-mono); font-size: 9px; letter-spacing: 0.24em; color: var(--hud-muted); text-shadow: none; text-align: center; }
+.ob-steps { display: grid; gap: 12px; counter-reset: step; }
+.ob-step { display: grid; grid-template-columns: 52px 1fr; gap: 14px; border: 1px solid var(--hud-line); border-left: 3px solid var(--hud-line-strong); background: rgba(4, 14, 22, 0.75); padding: 14px 16px; }
+.ob-step .idx { font-family: var(--hud-display); font-size: 22px; color: var(--hud-muted); letter-spacing: 0.06em; line-height: 1; padding-top: 2px; }
+.ob-step h3 { margin: 0; font-family: var(--hud-display); text-transform: uppercase; letter-spacing: 0.12em; font-size: 13px; color: var(--hud-text); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ob-step p { margin: 6px 0 0; color: var(--hud-muted); font-size: 13px; line-height: 1.55; }
+.ob-step .act { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ob-step.done { border-left-color: var(--hud-green); }
+.ob-step.done .idx { color: var(--hud-green); text-shadow: 0 0 10px rgba(57, 255, 136, 0.6); }
+.ob-step.ready { border-left-color: var(--hud-cyan); box-shadow: inset 0 0 30px rgba(0, 229, 255, 0.05); }
+.ob-step.ready .idx { color: var(--hud-cyan); }
+.ob-step.running { border-left-color: var(--hud-amber); }
+.ob-step.running .idx { color: var(--hud-amber); animation: hud-blink 1.2s steps(2) infinite; }
+.ob-step.locked, .ob-step.unavailable { opacity: 0.55; }
+.chip { font-family: var(--hud-mono); font-size: 10px; letter-spacing: 0.16em; padding: 2px 8px; border: 1px solid; text-transform: uppercase; }
+.chip.done { color: var(--hud-green); border-color: rgba(57, 255, 136, 0.45); }
+.chip.ready { color: var(--hud-cyan); border-color: var(--hud-line-strong); }
+.chip.running { color: var(--hud-amber); border-color: rgba(255, 176, 0, 0.45); }
+.chip.optional { color: var(--hud-violet); border-color: rgba(185, 138, 255, 0.45); }
+.chip.locked, .chip.unavailable { color: var(--hud-muted); border-color: var(--hud-line); }
+.hud-btn { display: inline-block; font-family: var(--hud-display); text-transform: uppercase; letter-spacing: 0.16em; font-size: 12px; padding: 10px 16px; border: 1px solid var(--hud-cyan); background: rgba(0, 229, 255, 0.12); color: var(--hud-cyan); cursor: pointer; text-decoration: none; }
+.hud-btn:hover { background: rgba(0, 229, 255, 0.22); box-shadow: 0 0 18px rgba(0, 229, 255, 0.3); text-decoration: none; }
+.hud-btn.ghost { border-color: var(--hud-line-strong); background: transparent; color: var(--hud-text); }
+.hud-btn[aria-disabled="true"], .hud-btn:disabled { opacity: 0.4; pointer-events: none; }
+.hud-file { font-family: var(--hud-mono); font-size: 12px; color: var(--hud-text); max-width: 100%; }
+.hud-file::file-selector-button { font-family: var(--hud-mono); text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; padding: 8px 12px; margin-right: 10px; border: 1px solid var(--hud-line-strong); background: rgba(0, 0, 0, 0.4); color: var(--hud-cyan); cursor: pointer; }
+.ob-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 20px; }
+@media (max-width: 600px) {
+  .ob-head { grid-template-columns: 1fr; justify-items: start; }
+  .ob-step { grid-template-columns: 36px 1fr; gap: 10px; }
+}

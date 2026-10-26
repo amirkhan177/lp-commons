@@ -1,14 +1,11 @@
 import Link from "next/link";
-import { JetBrains_Mono, Orbitron } from "next/font/google";
 import Nav from "../nav";
+import HudShell from "../hud-shell";
 import PathExplorer from "./path-explorer";
 import { buildTargetGraph, getTarget, searchFunds } from "@/lib/graph/build";
 import { findPaths, pathSubgraph } from "@/lib/graph/paths";
 import { db, WORKSPACE_ID } from "@/lib/db";
 import { requireSession } from "@/lib/session";
-
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-hud-mono" });
-const display = Orbitron({ subsets: ["latin"], variable: "--font-hud-display" });
 
 const money = (v: string | null) =>
   v == null ? "—" : Number(v) >= 1e6 ? `$${(Number(v) / 1e6).toFixed(1)}M` : `$${Number(v).toLocaleString()}`;
@@ -27,7 +24,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
     ? Math.min(1, Number(t.total_amount_sold ?? 0) / Number(t.total_offering_amount)) : null;
 
   return (
-    <div className={`hud ${mono.variable} ${display.variable}`}>
+    <HudShell>
       <div className="shell">
         <Nav />
         <div className="map-layout">
@@ -109,6 +106,6 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
           </section>
         </div>
       </div>
-    </div>
+    </HudShell>
   );
 }

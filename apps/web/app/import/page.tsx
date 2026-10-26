@@ -2,32 +2,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Nav from "../nav";
 import { db, WORKSPACE_ID } from "@/lib/db";
-import { deleteAllContacts, importContacts, runMatching, setMatchDecision } from "@/lib/import";
-import { parseLinkedInConnections } from "@/lib/linkedin-csv";
+import { deleteAllContacts, setMatchDecision } from "@/lib/import";
+import { uploadConnections } from "./actions";
 import { requireSession } from "@/lib/session";
 import { enqueueMapping } from "@/lib/agent/run";
-
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-
-async function upload(formData: FormData) {
-  "use server";
-  await requireSession();
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) redirect("/import?error=" + encodeURIComponent("Choose a CSV file."));
-  if (file.size > MAX_UPLOAD_BYTES) redirect("/import?error=" + encodeURIComponent("File is larger than 10 MB."));
-  let message: string;
-  try {
-    const contacts = parseLinkedInConnections(await file.text());
-    const { imported } = await importContacts(contacts);
-    const { auto, possible } = await runMatching();
-    message = `Imported ${imported} connections. ${auto} matched to people in filings, ${possible} possible matches to review. Mapping your network in the background — you'll get a notification when it's ready.`;
-    await enqueueMapping("linkedin_import");
-  } catch (e) {
-    redirect("/import?error=" + encodeURIComponent(e instanceof Error ? e.message : "Import failed."));
-  }
-  revalidatePath("/import");
-  redirect("/import?ok=" + encodeURIComponent(message));
-}
 
 async function decide(formData: FormData) {
   "use server";
@@ -88,7 +66,8 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
           Upload your LinkedIn <strong>Connections.csv</strong> (LinkedIn → Settings → Data privacy → Get a copy of
           your data → Connections). It stays in this private instance and is never added to the public dataset.
         </p>
-        <form action={upload} className="stack">
+        <form action={uploadConnections} className="stack">
+          <input type="hidden" name="returnTo" value="/import" />
           <input type="file" name="file" accept=".csv,text/csv" required />
           <div><button type="submit">Import connections</button></div>
         </form>

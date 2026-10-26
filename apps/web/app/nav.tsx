@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE } from "@/lib/constants";
 import { unreadCount } from "@/lib/notify";
+import { isOnboarded } from "@/lib/onboarding";
 
 async function logout() {
   "use server";
@@ -11,7 +12,7 @@ async function logout() {
 }
 
 export default async function Nav() {
-  const unread = await unreadCount();
+  const [unread, onboarded] = await Promise.all([unreadCount(), isOnboarded()]);
   return (
     <header className="topbar">
       <Link href="/reach" className="brand">LP Commons</Link>
@@ -20,6 +21,7 @@ export default async function Nav() {
         <Link href="/map">Path mapper</Link>
         <Link href="/import">Your network</Link>
         <Link href="/settings">Settings</Link>
+        {!onboarded && <Link href="/onboarding">Setup<span className="badge warn">to do</span></Link>}
       </nav>
       <form action={logout}><button className="secondary" type="submit">Sign out</button></form>
     </header>

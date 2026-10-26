@@ -18,7 +18,7 @@ async function login(formData: FormData) {
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });
-  redirect("/reach");
+  redirect("/");
 }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
