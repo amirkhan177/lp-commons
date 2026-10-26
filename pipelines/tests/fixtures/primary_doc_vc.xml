@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<edgarSubmission>
+  <schemaVersion>X0708</schemaVersion>
+  <submissionType>D/A</submissionType>
+  <testOrLive>LIVE</testOrLive>
+  <primaryIssuer>
+    <cik>0001999001</cik>
+    <entityName>Example Ventures Fund II, L.P.</entityName>
+    <issuerAddress>
+      <street1>1 Market St</street1>
+      <city>San Francisco</city>
+      <stateOrCountry>CA</stateOrCountry>
+      <stateOrCountryDescription>CALIFORNIA</stateOrCountryDescription>
+      <zipCode>94105</zipCode>
+    </issuerAddress>
+    <issuerPhoneNumber>415-555-0100</issuerPhoneNumber>
+    <jurisdictionOfInc>DELAWARE</jurisdictionOfInc>
+    <entityType>Limited Partnership</entityType>
+    <yearOfInc><withinFiveYears>true</withinFiveYears><value>2024</value></yearOfInc>
+  </primaryIssuer>
+  <relatedPersonsList>
+    <relatedPersonInfo>
+      <relatedPersonName>
+        <firstName>Jane</firstName>
+        <middleName>Q</middleName>
+        <lastName>Doe</lastName>
+      </relatedPersonName>
+      <relatedPersonAddress>
+        <street1>1 Market St</street1>
+        <city>San Francisco</city>
+        <stateOrCountry>CA</stateOrCountry>
+        <zipCode>94105</zipCode>
+      </relatedPersonAddress>
+      <relatedPersonRelationshipList>
+        <relationship>Executive Officer</relationship>
+        <relationship>Promoter</relationship>
+      </relatedPersonRelationshipList>
+      <relationshipClarification>Managing Member of the General Partner</relationshipClarification>
+    </relatedPersonInfo>
+    <relatedPersonInfo>
+      <relatedPersonName>
+        <firstName>Example Ventures GP II, LLC</firstName>
+        <lastName>N/A</lastName>
+      </relatedPersonName>
+      <relatedPersonAddress>
+        <city>San Francisco</city>
+        <stateOrCountry>CA</stateOrCountry>
+      </relatedPersonAddress>
+      <relatedPersonRelationshipList>
+        <relationship>Promoter</relationship>
+      </relatedPersonRelationshipList>
+    </relatedPersonInfo>
+  </relatedPersonsList>
+  <offeringData>
+    <industryGroup>
+      <industryGroupType>Pooled Investment Fund</industryGroupType>
+      <investmentFundInfo>
+        <investmentFundType>Venture Capital Fund</investmentFundType>
+        <is40Act>false</is40Act>
+      </investmentFundInfo>
+    </industryGroup>
+    <issuerSize><aggregateNetAssetValueRange>Decline to Disclose</aggregateNetAssetValueRange></issuerSize>
+    <federalExemptionsExclusions>
+      <item>06b</item>
+      <item>3C</item>
+      <item>3C.1</item>
+    </federalExemptionsExclusions>
+    <typeOfFiling>
+      <newOrAmendment>
+        <isAmendment>true</isAmendment>
+        <previousAccessionNumber>0001999001-24-000001</previousAccessionNumber>
+      </newOrAmendment>
+      <dateOfFirstSale><value>2024-03-15</value></dateOfFirstSale>
+    </typeOfFiling>
+    <durationOfOffering><moreThanOneYear>true</moreThanOneYear></durationOfOffering>
+    <typesOfSecuritiesOffered><isPooledInvestmentFundType>true</isPooledInvestmentFundType></typesOfSecuritiesOffered>
+    <businessCombinationTransaction><isBusinessCombinationTransaction>false</isBusinessCombinationTransaction></businessCombinationTransaction>
+    <minimumInvestmentAccepted>250000</minimumInvestmentAccepted>
+    <salesCompensationList/>
+    <offeringSalesAmounts>
+      <totalOfferingAmount>50000000</totalOfferingAmount>
+      <totalAmountSold>32500000</totalAmountSold>
+      <totalRemaining>17500000</totalRemaining>
+    </offeringSalesAmounts>
+    <investors>
+      <hasNonAccreditedInvestors>false</hasNonAccreditedInvestors>
+      <totalNumberAlreadyInvested>41</totalNumberAlreadyInvested>
+    </investors>
+    <salesCommissionsFindersFees>
+      <salesCommissions><dollarAmount>0</dollarAmount></salesCommissions>
+      <findersFees><dollarAmount>0</dollarAmount></findersFees>
+    </salesCommissionsFindersFees>
+  </offeringData>
+</edgarSubmission>

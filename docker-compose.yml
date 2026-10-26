@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: lpmap
+      POSTGRES_PASSWORD: lpmap
+      POSTGRES_DB: lpmap
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lpmap"]
+      interval: 2s
+      retries: 20
+
+  scraper:
+    build:
+      context: .
+      dockerfile: pipelines/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://lpmap:lpmap@db:5432/lpmap
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

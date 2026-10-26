@@ -1,0 +1,10 @@
+Description:           Daily Index of EDGAR Dissemination Feed by Company Name
+Last Data Received:    October 1, 2025
+Comments:              webmaster@sec.gov
+Anonymous FTP:         ftp://ftp.sec.gov/edgar/
+
+CIK|Company Name|Form Type|Date Filed|File Name
+--------------------------------------------------------------------------------
+1999001|Example Ventures Fund II, L.P.|D/A|20251001|edgar/data/1999001/0001999001-25-000002.txt
+1999002|Some Hedge Fund LP|D|20251001|edgar/data/1999002/0001999002-25-000001.txt
+320193|Apple Inc.|10-Q|20251001|edgar/data/320193/0000320193-25-000100.txt
