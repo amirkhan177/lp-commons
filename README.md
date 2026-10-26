@@ -14,8 +14,8 @@ Built from free public filings, starting with SEC Form D.
 > Provided **as is, without warranty or liability**. Not affiliated with the SEC or
 > any other organization named here. Read the full **[Disclaimer](DISCLAIMER.md)**.
 
-> Status: P0 — Postgres schema + Form D ingest service. Web app, LinkedIn/Clay import and
-> intro-path finding come in later phases.
+> Status: Form D ingest service + path mapper web app (LinkedIn import, deterministic matching,
+> intro paths). Clay enrichment, bring-your-own Claude matching, and more LP sources come next.
 
 ## What's here
 
@@ -25,8 +25,31 @@ pipelines/            Python ingest service (`lpmap` CLI)
   src/lpmap/sec_client.py     SEC HTTP client, hard-capped at 10 requests/second
   src/lpmap/sources/formd.py  Form D bulk TSV + daily index + primary_doc.xml parsers
   src/lpmap/pipeline.py       sync: backfill bulk quarters, then catch up daily filings
+apps/web/             Next.js path mapper (login, LinkedIn import, intro paths + graph)
+  lib/graph/paths.ts          pure path finder (scored, best path per contact)
+  lib/graph/build.ts          subgraph around a target fund from filings + your network
+  lib/import.ts               Connections.csv import and contact <-> filing-person matching
 docker-compose.yml    Local Postgres + scraper
 ```
+
+## Path mapper
+
+Upload your LinkedIn `Connections.csv`, search a fund, and get ranked warm-intro paths:
+
+- **You → connection → fund**: your connection works at the fund's firm (LinkedIn company matches
+  the firm name on its Form D).
+- **You → connection = person in filings → fund**: your connection is named on the fund's Form D.
+- **You → connection → co-fund → GP → fund**: your connection is named on another fund that shares
+  a related person with the target.
+
+Scores multiply hop weights: how recently you connected, how confident the name match is, and the
+relationship type. Every hop links to its evidence (the Form D filing or your LinkedIn data).
+Name matches are deterministic in v1: same name **and** firm = matched; same unique name only =
+"possible" (review on *Your network*). Your imported network stays in your instance's private
+tables and is never exported.
+
+Run locally: set `DATABASE_URL`, `ADMIN_PASSWORD`, `SESSION_SECRET` in `apps/web/.env.local`, then
+`cd apps/web && pnpm install && pnpm dev`. Tests: `pnpm test`.
 
 ## Data: what Form D does and doesn't tell you
 
@@ -93,6 +116,10 @@ recorded in `ingest_state`, so runs are resumable and idempotent.
 
 Scraper variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SEC_USER_AGENT`,
 optional `FORMD_BACKFILL_FROM` (default `2016q1`).
+
+The `web` service builds `apps/web/Dockerfile` (root directory `apps/web`) with variables
+`DATABASE_URL=${{Postgres.DATABASE_URL}}` (private network only — the database has no public
+endpoint), `ADMIN_PASSWORD`, and `SESSION_SECRET`.
 
 ## Project docs
 
