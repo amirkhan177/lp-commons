@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Nav from "../nav";
 import PathExplorer from "./path-explorer";
+import FundFilterBar, { RaiseBadge } from "../fund-filter-bar";
+import { hasFilters, parseFilters } from "@/lib/fund-filters";
 import { buildTargetGraph, getTarget, searchFunds } from "@/lib/graph/build";
 import { findPaths, pathSubgraph } from "@/lib/graph/paths";
 import { db, WORKSPACE_ID } from "@/lib/db";
@@ -9,12 +11,20 @@ import { requireSession } from "@/lib/session";
 const money = (v: string | null) =>
   v == null ? "—" : Number(v) >= 1e6 ? `$${(Number(v) / 1e6).toFixed(1)}M` : `$${Number(v).toLocaleString()}`;
 
-export default async function MapPage({ searchParams }: { searchParams: Promise<{ q?: string; target?: string }> }) {
+export default async function MapPage({ searchParams }: {
+  searchParams: Promise<{ q?: string; target?: string; status?: string; remaining?: string; raised?: string }>;
+}) {
   await requireSession();
-  const { q = "", target } = await searchParams;
+  const sp = await searchParams;
+  const { q = "", target } = sp;
+  const filters = parseFilters(sp);
+  const filtering = hasFilters(filters);
+  const filterQs = new URLSearchParams(
+    Object.entries({ status: sp.status, remaining: sp.remaining, raised: sp.raised }).filter((e): e is [string, string] => !!e[1] && e[1] !== "0"),
+  ).toString();
   const contactCount = Number((await db().query<{ n: string }>(
     "SELECT count(*) AS n FROM user_contacts WHERE workspace_id = $1", [WORKSPACE_ID])).rows[0].n);
-  const hits = q.trim().length >= 2 ? await searchFunds(q.trim()) : [];
+  const hits = q.trim().length >= 2 || filtering ? await searchFunds(q.trim().length >= 2 ? q.trim() : "", filters) : [];
   const t = target && /^\d+$/.test(target) ? await getTarget(Number(target)) : null;
   const graph = t ? await buildTargetGraph(t) : null;
   const paths = graph && t ? findPaths(graph, "me", `e:${t.id}`, { limit: 15 }) : [];
@@ -36,19 +46,23 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
               <p className="notice">No network on file. <Link href="/import">Import your connections</Link> to light up routes.</p>
             )}
             <form method="get" action="/map" className="hud-search">
+              {filters.status && <input type="hidden" name="status" value={filters.status} />}
+              {filters.minRemaining && <input type="hidden" name="remaining" value={filters.minRemaining} />}
+              {filters.minRaised && <input type="hidden" name="raised" value={filters.minRaised} />}
               <span aria-hidden>&gt;</span>
               <input type="search" name="q" defaultValue={q} placeholder="Search a fund or its management company" aria-label="Search funds" autoComplete="off" />
             </form>
+            <FundFilterBar action="/map" filters={filters} keep={{ q: q || undefined }} />
             {hits.length > 0 && (
               <div className="hud-panel">
-                <div className="hud-kicker" style={{ marginBottom: 6 }}>{hits.length} candidates</div>
+                <div className="hud-kicker" style={{ marginBottom: 6 }}>{hits.length}{hits.length === 40 ? "+" : ""} {q.trim() ? "matches" : "funds"}</div>
                 <ul className="hud-results">
                   {hits.map((h) => (
                     <li key={h.entity_id}>
-                      <Link href={`/map?q=${encodeURIComponent(q)}&target=${h.entity_id}`}>{h.name}</Link>
+                      <Link href={`/map?q=${encodeURIComponent(q)}&target=${h.entity_id}${filterQs ? `&${filterQs}` : ""}`}>{h.name}</Link>
                       <Link href={`/org/${h.entity_id}`} className="small" style={{ marginLeft: 8 }}>profile</Link>
                       {h.type === "fof" && <span className="badge">FoF</span>}
-                      {h.is_active && <span className="badge ok">active</span>}
+                      <RaiseBadge status={h.raise_status} remaining={h.remaining_to_raise} indefinite={h.offering_indefinite} />
                       {h.is_spv && <span className="badge warn">SPV</span>}
                       <div className="muted small">{[h.state, h.vintage && `vintage ${h.vintage}`, h.total_offering_amount && `raising ${money(h.total_offering_amount)}`].filter(Boolean).join(" · ")}</div>
                       {h.managers.length > 0 && (
@@ -62,7 +76,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
                 </ul>
               </div>
             )}
-            {q.trim().length >= 2 && hits.length === 0 && <p className="muted">No match for “{q}”.</p>}
+            {(q.trim().length >= 2 || filtering) && hits.length === 0 && <p className="muted">No funds match{q.trim() ? ` “${q}”` : ""}{filtering ? " with these filters" : ""}.</p>}
             {!t && (
               <div className="boot" aria-live="polite">
                 <span>&gt; System online</span>

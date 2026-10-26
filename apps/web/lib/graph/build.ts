@@ -3,6 +3,7 @@ import { db, WORKSPACE_ID } from "../db";
 import type { Graph, GraphEdge, GraphNode } from "./paths";
 import { roleWeight, SAME_FIRM_WEIGHT } from "./weights";
 import { contactEdges, type ContactRow, CONTACT_SELECT } from "./contacts";
+import { filterSql, type FundFilters } from "../fund-filters";
 
 const MAX_CO_FUNDS = 300;
 
@@ -138,35 +139,57 @@ export interface FundHit {
   is_spv: boolean;
   managers: { name: string; role: "manager" | "general_partner" }[];
   via_manager: boolean; // matched because its management company / GP matched the query
+  raise_status: string | null;
+  remaining_to_raise: string | null;
+  offering_indefinite: boolean | null;
 }
 
-/** Funds whose own name, or whose management company / GP name, matches the query. */
-export async function searchFunds(q: string): Promise<FundHit[]> {
-  const like = q.replace(/[\\%_]/g, (m) => "\\" + m);
+const HIT_COLS = `fp.entity_id, fp.name, fp.type, fp.state, fp.vintage, fp.is_active, fp.total_offering_amount,
+  fp.name ~* '(a series of|\\mspv\\M)' AS is_spv, fp.raise_status, fp.remaining_to_raise, fp.offering_indefinite,
+  COALESCE((SELECT json_agg(json_build_object('name', m.manager_name, 'role', m.role) ORDER BY m.role DESC)
+            FROM fund_manager_names m WHERE m.fund_entity_id = fp.entity_id), '[]') AS managers`;
+
+/**
+ * Funds whose own name, or whose management company / GP name, matches the query, narrowed by
+ * filters. With an empty query and some filters, browses all matching (non-SPV) funds instead.
+ */
+export async function searchFunds(q: string, filters?: FundFilters): Promise<FundHit[]> {
   const key = q.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!key) {
+    if (!filters) return [];
+    const params: unknown[] = [];
+    const where = filterSql(filters, "fp", params);
+    if (!where) return [];
+    const { rows } = await db().query<FundHit>(
+      `SELECT ${HIT_COLS}, false AS via_manager FROM fund_profiles fp
+       WHERE fp.name !~* 'a series of' AND fp.vintage >= 2016${where}
+       ORDER BY fp.total_amount_sold DESC NULLS LAST LIMIT 40`, params);
+    return rows;
+  }
+  const like = q.replace(/[\\%_]/g, (m) => "\\" + m);
+  const params: unknown[] = [like, key];
+  const where = filters ? filterSql(filters, "fp", params) : "";
   const { rows } = await db().query<FundHit>(
     `WITH by_name AS (
        SELECT id, false AS via_manager FROM entities
        WHERE type IN ('vc_fund', 'fof') AND (name ILIKE '%' || $1 || '%' OR name_normalized % $2)
        ORDER BY (name ILIKE $1 || '%') DESC, similarity(name_normalized, $2) DESC
-       LIMIT 100
+       LIMIT 200
      ), by_manager AS (
        SELECT DISTINCT m.fund_entity_id AS id, true AS via_manager
        FROM entities mg JOIN fund_managers m ON m.manager_entity_id = mg.id
        WHERE mg.type = 'gp_firm' AND (mg.name ILIKE '%' || $1 || '%' OR mg.name_normalized % $2)
-       LIMIT 100
+       LIMIT 200
      ), hits AS (
        SELECT id, bool_and(via_manager) AS via_manager FROM (SELECT * FROM by_name UNION ALL SELECT * FROM by_manager) u
        GROUP BY id
      )
-     SELECT fp.entity_id, fp.name, fp.type, fp.state, fp.vintage, fp.is_active, fp.total_offering_amount,
-            fp.name ~* '(a series of|\\mspv\\M)' AS is_spv, h.via_manager,
-            COALESCE((SELECT json_agg(json_build_object('name', m.manager_name, 'role', m.role) ORDER BY m.role DESC)
-                      FROM fund_manager_names m WHERE m.fund_entity_id = fp.entity_id), '[]') AS managers
+     SELECT ${HIT_COLS}, h.via_manager
      FROM fund_profiles fp JOIN hits h ON h.id = fp.entity_id
+     WHERE true${where}
      ORDER BY (fp.name ILIKE ($1 || '%')) DESC, fp.is_active DESC, h.via_manager, similarity(lower(fp.name), $2) DESC
      LIMIT 40`,
-    [like, key],
+    params,
   );
   return rows;
 }

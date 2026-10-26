@@ -150,6 +150,9 @@ def test_parse_bulk_listing_picks_real_paths_and_latest_revision():
     ("-.", None, "US HMC Series GP LLC", "US HMC Series GP, LLC"),
     ("(none)", None, "Kamerra Holdings, LLC", "Kamerra Holdings, LLC"),
     ("N/A", None, "-", None),
+    ("General Partner", None, "G Squared Equity GP VII, LLC", "G Squared Equity GP VII, LLC"),
+    ("Management Company", None, "Protagonist Management, LLC", "Protagonist Management, LLC"),
+    ("[none]", None, "Alpha Square Group GP III, LLC", "Alpha Square Group GP III, LLC"),
 ])
 def test_org_name(first, middle, last, expected):
     from lpmap.normalize import org_name

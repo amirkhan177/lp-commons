@@ -44,18 +44,22 @@ def is_org_related_person(first: str | None, last: str | None) -> bool:
 _SUFFIX_ONLY = re.compile(r"^(llc|l\.l\.c\.?|lp|l\.p\.?|llp|inc\.?|ltd\.?|limited|corp\.?|co\.?)$", re.I)
 
 
+# Filers sometimes type the role into the name field: "General Partner Acme GP, LLC".
+_LABEL_PREFIX = re.compile(r"^(?:(?:\[none\]|\(none\)|general\s+partner|management\s+company|managing\s+member|investment\s+manager)\s+)+", re.I)
+
+
 def org_name(first: str | None, middle: str | None, last: str | None) -> str | None:
     """Rebuild an organization's name from Form D's person-shaped fields.
 
     Filers squeeze names in oddly: ('N/A', 'Acme GP, LLC'), ('Seed Labs', 'LLC'), ('LLC', 'Sydecar').
     """
-    junk = lambda x: x.lower() in _PLACEHOLDER or x.lower() in {"(none)", "none."} or not re.search(r"[a-z0-9]", x, re.I)
+    junk = lambda x: x.lower() in _PLACEHOLDER or x.lower() in {"(none)", "[none]", "none."} or not re.search(r"[a-z0-9]", x, re.I)
     parts = [x for x in (clean(first), clean(middle), clean(last)) if x and not junk(x)]
     if not parts:
         return None
     if len(parts) == 2 and _SUFFIX_ONLY.match(parts[0]):
         parts = [parts[1], parts[0]]           # ('LLC', 'Sydecar') -> 'Sydecar LLC'
-    name = " ".join(parts)
+    name = _LABEL_PREFIX.sub("", " ".join(parts))
     name = re.sub(r"\s+(llc|lp|llp|inc|ltd)\b\.?$", lambda m: ", " + m.group(1).upper(), name, flags=re.I)
     return re.sub(r",\s*,", ",", name).strip(" ,")
 

@@ -462,3 +462,18 @@ html, body { background: #03070c; color-scheme: dark; }
   .file { grid-template-columns: 84px 1fr; gap: 10px; }
   .portrait { width: 84px; height: 104px; }
 }
+
+/* ---- Fund filter bar ---- */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; padding: 12px 14px; border: 1px solid var(--hud-line); background: rgba(4, 14, 22, 0.7); }
+.filter-bar label { display: grid; gap: 4px; }
+.filter-bar label > span { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--hud-muted); }
+.filter-bar .check { display: flex; gap: 6px; align-items: center; font-size: 12px; padding-bottom: 8px; }
+.hud select {
+  font-family: var(--hud-mono); font-size: 12px; color: var(--hud-text); background: rgba(0, 10, 16, 0.9);
+  border: 1px solid var(--hud-line-strong); border-radius: 0; padding: 7px 28px 7px 10px; appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--hud-cyan) 50%), linear-gradient(135deg, var(--hud-cyan) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%; background-size: 5px 5px; background-repeat: no-repeat;
+}
+.filter-actions { display: flex; gap: 12px; align-items: center; }
+.filter-hint { flex-basis: 100%; margin: 0; font-size: 11px; color: var(--hud-muted); }
+@media (max-width: 600px) { .filter-bar label { flex: 1 1 140px; } .filter-bar select { width: 100%; } }
