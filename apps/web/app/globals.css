@@ -306,3 +306,61 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: 
   .ob-head { grid-template-columns: 1fr; justify-items: start; }
   .ob-step { grid-template-columns: 36px 1fr; gap: 10px; }
 }
+
+/* ---- App-wide mission mode: base components inside .hud ---- */
+.hud {
+  /* remap the base tokens so every page's existing styles adopt the HUD palette */
+  --bg: var(--hud-bg); --surface: var(--hud-panel); --text: var(--hud-text); --muted: var(--hud-muted);
+  --border: var(--hud-line); --accent: var(--hud-cyan); --accent-soft: rgba(0, 229, 255, 0.12);
+  --warn: var(--hud-amber); --warn-soft: rgba(255, 176, 0, 0.1); --ok: var(--hud-green); --ok-soft: rgba(57, 255, 136, 0.1);
+  --danger: var(--hud-target); --radius: 0px;
+  accent-color: var(--hud-cyan);
+  color-scheme: dark;
+}
+.hud h1, .hud h2, .hud h3 { font-family: var(--hud-display); text-transform: uppercase; letter-spacing: 0.12em; color: #fff; font-weight: 600; }
+.hud h1 { font-size: clamp(20px, 2.6vw, 26px); }
+.hud .hud-kicker + h1 { margin-top: 6px; }
+.hud h2 { font-size: 15px; color: var(--hud-cyan); }
+.hud h3 { font-size: 13px; }
+.hud .card {
+  position: relative; background: var(--hud-panel); border: 1px solid var(--hud-line); border-radius: 0;
+  box-shadow: inset 0 0 40px rgba(0, 229, 255, 0.04);
+}
+.hud .card::before, .hud .card::after { content: ""; position: absolute; width: 12px; height: 12px; border: 2px solid var(--hud-cyan); pointer-events: none; }
+.hud .card::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+.hud .card::after { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+.hud input[type="text"], .hud input[type="password"], .hud input[type="search"], .hud input[type="email"] {
+  background: rgba(0, 10, 16, 0.85); border: 1px solid var(--hud-line-strong); border-radius: 0; color: var(--hud-text);
+  font-family: var(--hud-mono); letter-spacing: 0.04em;
+}
+.hud input:focus-visible, .hud button:focus-visible, .hud a:focus-visible { outline: 1px solid var(--hud-cyan); outline-offset: 2px; box-shadow: 0 0 16px rgba(0, 229, 255, 0.3); }
+.hud input[type="file"] { font-family: var(--hud-mono); font-size: 12px; color: var(--hud-text); max-width: 100%; }
+.hud input[type="file"]::file-selector-button { font-family: var(--hud-mono); text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; padding: 8px 12px; margin-right: 10px; border: 1px solid var(--hud-line-strong); background: rgba(0, 0, 0, 0.4); color: var(--hud-cyan); cursor: pointer; }
+.hud button, .hud .btn {
+  border-radius: 0; font-family: var(--hud-display); text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px;
+  padding: 10px 16px; border: 1px solid var(--hud-cyan); background: rgba(0, 229, 255, 0.12); color: var(--hud-cyan);
+}
+.hud button:hover:not(:disabled), .hud .btn:hover { background: rgba(0, 229, 255, 0.22); box-shadow: 0 0 18px rgba(0, 229, 255, 0.3); text-decoration: none; }
+.hud button.secondary { font-family: var(--hud-display); border-color: var(--hud-line-strong); background: transparent; color: var(--hud-text); }
+.hud button.secondary:hover:not(:disabled) { border-color: var(--hud-cyan); color: var(--hud-cyan); }
+.hud button:disabled { opacity: 0.4; cursor: not-allowed; }
+.hud .error { color: var(--hud-target); }
+.hud .notice { border-radius: 0; }
+.hud table { border: 1px solid var(--hud-line); background: rgba(4, 14, 22, 0.6); }
+.hud th { font-family: var(--hud-mono); font-size: 10px; letter-spacing: 0.22em; color: var(--hud-cyan-dim); background: rgba(0, 229, 255, 0.05); border-bottom: 1px solid var(--hud-line-strong); }
+.hud td { border-bottom: 1px dashed var(--hud-line); }
+.hud tbody tr:hover { background: rgba(0, 229, 255, 0.04); }
+.hud code { font-family: var(--hud-mono); color: var(--hud-amber); }
+.hud label { color: var(--hud-text); }
+.hud .login { margin-top: 14vh; }
+.hud .login h1 { text-align: left; }
+@media (max-width: 700px) {
+  .hud table { display: block; overflow-x: auto; }
+}
+/* The whole app runs in mission mode: dark page behind it, and no child margin can collapse
+   through the .hud wrapper to expose the page background. */
+html, body { background: #03070c; color-scheme: dark; }
+.hud { display: flow-root; }
+.act-alt { margin-top: 12px; }
+.act-alt summary { cursor: pointer; font-size: 12px; letter-spacing: 0.08em; color: var(--hud-cyan-dim); text-transform: uppercase; }
+.act-alt summary:hover { color: var(--hud-cyan); }

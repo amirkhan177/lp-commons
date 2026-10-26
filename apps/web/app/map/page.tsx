@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Nav from "../nav";
-import HudShell from "../hud-shell";
 import PathExplorer from "./path-explorer";
 import { buildTargetGraph, getTarget, searchFunds } from "@/lib/graph/build";
 import { findPaths, pathSubgraph } from "@/lib/graph/paths";
@@ -24,7 +23,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
     ? Math.min(1, Number(t.total_amount_sold ?? 0) / Number(t.total_offering_amount)) : null;
 
   return (
-    <HudShell>
+    <>
       <div className="shell">
         <Nav />
         <div className="map-layout">
@@ -106,6 +105,6 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
           </section>
         </div>
       </div>
-    </HudShell>
+    </>
   );
 }

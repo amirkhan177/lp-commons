@@ -54,6 +54,7 @@ export default async function ReachPage({ searchParams }: { searchParams: Promis
   return (
     <div className="shell">
       <Nav />
+      <div className="hud-kicker">LP Commons // Reach</div>
       <h1>Funds you can reach</h1>
       <div className="card stack">
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>

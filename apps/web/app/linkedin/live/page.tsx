@@ -14,6 +14,7 @@ export default async function LinkedInLivePage({ searchParams }: { searchParams:
   return (
     <div className="shell">
       <Nav />
+      <div className="hud-kicker">LP Commons // LinkedIn</div>
       <h1>Sign in to LinkedIn</h1>
       <p className="muted small">
         This window is a browser running on your LP Commons server. Sign in as you normally would, including any

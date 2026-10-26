@@ -39,6 +39,9 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
   await requireSession();
   const { ok, error } = await searchParams;
   const pool = db();
+  const agentOn = (await pool.query<{ ok: boolean }>(
+    "SELECT EXISTS (SELECT 1 FROM integrations WHERE workspace_id = $1 AND provider = 'linkedin' AND status = 'connected') AS ok",
+    [WORKSPACE_ID])).rows[0].ok;
   const stats = (await pool.query<{ total: string; matched: string; possible: string; firm: string }>(
     `SELECT count(*) AS total,
             count(*) FILTER (WHERE match_status IN ('auto', 'confirmed')) AS matched,
@@ -60,10 +63,14 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
   return (
     <div className="shell">
       <Nav />
+      <div className="hud-kicker">LP Commons // Network</div>
       <h1>Your network</h1>
       <div className="card stack">
+        {agentOn && (
+          <p className="notice" style={{ margin: 0, borderLeftColor: "var(--hud-green)" }}>LinkedIn agent connected — it keeps your connections in sync, so no upload is needed.</p>
+        )}
         <p style={{ margin: 0 }}>
-          Upload your LinkedIn <strong>Connections.csv</strong> (LinkedIn → Settings → Data privacy → Get a copy of
+          {agentOn ? "Optional: " : ""}Upload your LinkedIn <strong>Connections.csv</strong> (LinkedIn → Settings → Data privacy → Get a copy of
           your data → Connections). It stays in this private instance and is never added to the public dataset.
         </p>
         <form action={uploadConnections} className="stack">

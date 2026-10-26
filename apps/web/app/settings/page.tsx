@@ -66,6 +66,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   return (
     <div className="shell">
       <Nav />
+      <div className="hud-kicker">LP Commons // Settings</div>
       <h1>Settings</h1>
       {ok && <p className="badge ok">{MESSAGES[ok] ?? ok}</p>}
       {error && <p className="error">{MESSAGES[error] ?? error}</p>}

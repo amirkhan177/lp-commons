@@ -26,6 +26,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const configured = authConfigured();
   return (
     <main className="login card stack">
+      <div className="hud-kicker">Secure access</div>
       <h1 style={{ margin: 0 }}>LP Commons</h1>
       {!configured ? (
         <p className="notice">

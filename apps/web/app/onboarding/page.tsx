@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import HudShell from "../hud-shell";
 import Nav from "../nav";
 import { uploadConnections } from "../import/actions";
 import AutoRefresh from "./auto-refresh";
@@ -41,7 +40,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   const dest = ob.bestFundId ? `/map?target=${ob.bestFundId}` : "/reach";
 
   return (
-    <HudShell>
+    <>
       <div className="shell">
         <Nav />
         <AutoRefresh active={ob.mapping || ob.steps[0].state === "running"} />
@@ -67,17 +66,20 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
               <div>
                 <h3>{s.title} <span className={`chip ${s.state}`}>{CHIP[s.state]}</span></h3>
                 <p>{s.detail}</p>
-                {s.action === "upload" && s.state !== "done" && (
-                  <form action={uploadConnections} className="act">
-                    <input type="hidden" name="returnTo" value="/onboarding" />
-                    <input className="hud-file" type="file" name="file" accept=".csv,text/csv" required aria-label="LinkedIn Connections.csv" />
-                    <button className="hud-btn" type="submit">Upload</button>
-                  </form>
+                {s.id === "linkedin" && s.href && (
+                  <div className="act"><Link className="hud-btn" href={s.href}>Connect LinkedIn</Link></div>
                 )}
-                {s.action === "upload" && s.state === "done" && (
-                  <div className="act"><Link className="hud-btn ghost" href="/import">Manage</Link></div>
+                {s.action === "upload" && (s.state !== "done" || ob.agent) && (
+                  <details className="act-alt" open={!ob.agent && s.state !== "done"}>
+                    {ob.agent && <summary>{s.state === "done" ? "Upload a newer export" : "Or upload your LinkedIn export instead"}</summary>}
+                    <form action={uploadConnections} className="act">
+                      <input type="hidden" name="returnTo" value="/onboarding" />
+                      <input className="hud-file" type="file" name="file" accept=".csv,text/csv" required aria-label="LinkedIn Connections.csv" />
+                      <button className="hud-btn ghost" type="submit">Upload</button>
+                    </form>
+                  </details>
                 )}
-                {s.href && s.state !== "locked" && s.state !== "unavailable" && s.state !== "done" && (
+                {s.href && s.id !== "linkedin" && s.state !== "locked" && s.state !== "unavailable" && s.state !== "done" && (
                   <div className="act"><Link className="hud-btn ghost" href={s.href}>Open</Link></div>
                 )}
               </div>
@@ -102,6 +104,6 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
           verify before reaching out. Not investment advice.
         </p>
       </div>
-    </HudShell>
+    </>
   );
 }

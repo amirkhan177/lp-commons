@@ -23,6 +23,7 @@ export interface Onboarding {
   onboarded: boolean;
   bestFundId: number | null;
   mapping: boolean;
+  agent: boolean;
 }
 
 /** Derived from real data, so steps tick themselves off as things get connected. */
@@ -61,27 +62,26 @@ export async function getOnboarding(): Promise<Onboarding> {
         ? `${n(r.funds)} VC funds and funds-of-funds from SEC Form D, updated through ${r.latest_filing}.`
         : "The SEC Form D database is still loading. This step completes on its own.",
     },
-    {
-      id: "linkedin_csv", title: "Import your LinkedIn connections", required: false,
-      state: Number(r.linkedin) > 0 ? "done" : "ready",
-      detail: Number(r.linkedin) > 0
-        ? `${n(r.linkedin)} connections imported.`
-        : "LinkedIn → Settings → Data privacy → Get a copy of your data → Connections. LinkedIn emails the file in about 10 minutes; upload it here.",
-      action: "upload",
-    },
   ];
-  if (linkedinAgentEnabled()) {
-    steps.push({
-      id: "linkedin_agent", title: "Let the agent read your work history", required: false,
-      state: r.li_status === "connected" ? "done" : r.li_status ? "ready" : "optional",
-      detail: r.li_status === "connected"
-        ? "Signed in. The agent reads your connections' work history in the background, a few each minute."
-        : r.li_status
-          ? "LinkedIn asked you to sign in again. Reconnect from Settings."
-          : "Optional and opt-in: past employers make many more routes. Uses your own LinkedIn session; review the risks first.",
-      href: "/settings",
-    });
-  }
+  // One LinkedIn step. With the agent available it's the main path (it reads the connections list
+  // itself); the CSV export is the fallback for anyone who'd rather not connect their account.
+  const agent = linkedinAgentEnabled();
+  const liAgentOn = r.li_status === "connected";
+  steps.push({
+    id: "linkedin", title: "Connect LinkedIn", required: false,
+    state: liAgentOn || Number(r.linkedin) > 0 ? "done" : "ready",
+    detail: liAgentOn
+      ? `Connected. The agent keeps your ${n(r.linkedin)} connections in sync and reads their work history in the background.`
+      : r.li_status
+        ? "LinkedIn asked you to sign in again. Reconnect, or upload your connections export instead."
+        : Number(r.linkedin) > 0
+          ? `${n(r.linkedin)} connections imported from your LinkedIn export.${agent ? " Connect the agent too to add their work history." : ""}`
+          : agent
+            ? "Sign in once and the agent reads your connections and their work history for you — no export needed. Prefer not to connect your account? Upload your LinkedIn export instead."
+            : "LinkedIn → Settings → Data privacy → Get a copy of your data → Connections. LinkedIn emails the file in about 10 minutes; upload it here.",
+    href: agent && !liAgentOn ? "/settings" : undefined,
+    action: liAgentOn ? undefined : "upload",
+  });
   steps.push({
     id: "google", title: "Connect Google contacts & calendar", required: false,
     state: r.google_connected ? "done" : googleConfigured() && encryptionConfigured() ? "optional" : "unavailable",
@@ -96,7 +96,7 @@ export async function getOnboarding(): Promise<Onboarding> {
     id: "review", title: "Review possible matches", required: false,
     state: !hasNetwork ? "locked" : Number(r.possible) > 0 ? "ready" : "done",
     detail: !hasNetwork
-      ? "Available after you import a network."
+      ? "Available once your network is connected."
       : Number(r.possible) > 0
         ? `${n(r.possible)} ${Number(r.possible) === 1 ? "person shares" : "people share"} a name with someone in the filings but couldn't be confirmed. Confirm or reject ${Number(r.possible) === 1 ? "it" : "them"}.`
         : `${n(r.matched)} of your connections are matched to people named in Form D filings.`,
@@ -106,7 +106,7 @@ export async function getOnboarding(): Promise<Onboarding> {
     id: "map", title: "Build your intro map", required: true,
     state: !hasNetwork ? "locked" : mapping ? "running" : mapped ? "done" : "ready",
     detail: !hasNetwork
-      ? "Starts automatically once you import a network."
+      ? "Starts automatically once your network is connected."
       : mapping
         ? "Mapping every active fund through your network…"
         : mapped
@@ -122,7 +122,7 @@ export async function getOnboarding(): Promise<Onboarding> {
   const progress = doneCount / (required.length + 1);
 
   return {
-    steps, progress, ready: networkDone && mapped, onboarded: r.onboarded, bestFundId: r.best, mapping,
+    steps, progress, ready: networkDone && mapped, agent, onboarded: r.onboarded, bestFundId: r.best, mapping,
   };
 }
 
