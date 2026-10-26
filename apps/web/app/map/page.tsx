@@ -41,7 +41,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
             )}
             <form method="get" action="/map" className="hud-search">
               <span aria-hidden>&gt;</span>
-              <input type="search" name="q" defaultValue={q} placeholder="Acquire target: fund or fund-of-funds" aria-label="Search funds" autoComplete="off" />
+              <input type="search" name="q" defaultValue={q} placeholder="Search a fund or fund-of-funds" aria-label="Search funds" autoComplete="off" />
             </form>
             {hits.length > 0 && (
               <div className="hud-panel">
@@ -53,7 +53,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
                       {h.type === "fof" && <span className="badge">FoF</span>}
                       {h.is_active && <span className="badge ok">active</span>}
                       {h.is_spv && <span className="badge warn">SPV</span>}
-                      <div className="muted small">{[h.state, h.vintage && `vintage ${h.vintage}`, h.total_offering_amount && `target ${money(h.total_offering_amount)}`].filter(Boolean).join(" · ")}</div>
+                      <div className="muted small">{[h.state, h.vintage && `vintage ${h.vintage}`, h.total_offering_amount && `raising ${money(h.total_offering_amount)}`].filter(Boolean).join(" · ")}</div>
                     </li>
                   ))}
                 </ul>
@@ -65,7 +65,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
                 <span>&gt; System online</span>
                 <span>&gt; Form D index loaded</span>
                 <span>&gt; Network link: {contactCount.toLocaleString()} contacts</span>
-                <span>&gt; Awaiting target…</span>
+                <span>&gt; Select a fund…</span>
               </div>
             )}
           </section>
@@ -74,22 +74,22 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
             {t ? (
               <>
                 <div className="hud-panel target">
-                  <div className="hud-kicker" style={{ color: "var(--hud-target)" }}>◉ Target dossier · CIK {t.cik}</div>
+                  <div className="hud-kicker" style={{ color: "var(--hud-target)" }}>◉ Fund profile · CIK {t.cik}</div>
                   <div className="dossier-name">{t.name}</div>
                   <div className="dossier-grid">
                     <div className="dossier-cell"><small>Vintage</small><b>{t.vintage ?? "—"}</b></div>
                     <div className="dossier-cell"><small>Raised</small><b>{money(t.total_amount_sold)}</b></div>
-                    <div className="dossier-cell"><small>Target</small><b>{money(t.total_offering_amount)}</b></div>
+                    <div className="dossier-cell"><small>Raise goal</small><b>{money(t.total_offering_amount)}</b></div>
                     <div className="dossier-cell"><small>Investors</small><b>{t.num_investors ?? "—"}</b></div>
                     <div className="dossier-cell"><small>Status</small><b style={{ color: t.is_active ? "var(--hud-green)" : "var(--hud-muted)" }}>{t.is_active ? "Raising" : "Quiet"}</b></div>
                   </div>
-                  {raised != null && <div className="gauge" title={`${Math.round(raised * 100)}% of target raised`}><i style={{ width: `${raised * 100}%` }} /></div>}
+                  {raised != null && <div className="gauge" title={`${Math.round(raised * 100)}% of raise goal raised`}><i style={{ width: `${raised * 100}%` }} /></div>}
                   <div className="small muted" style={{ marginTop: 10 }}>
                     <a href={`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${t.cik}&type=D`} target="_blank" rel="noreferrer">Source: SEC EDGAR filings ↗</a>
                   </div>
                 </div>
                 {paths.length === 0 ? (
-                  <div className="hud-panel"><p style={{ margin: 0 }} className="muted">No route found from your network to this target yet.</p></div>
+                  <div className="hud-panel"><p style={{ margin: 0 }} className="muted">No route found from your network to this fund yet.</p></div>
                 ) : (
                   <PathExplorer graph={view!} paths={paths} targetId={`e:${t.id}`} />
                 )}
@@ -101,7 +101,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
             ) : (
               <div className="hud-panel" style={{ minHeight: 240, display: "grid", placeItems: "center", textAlign: "center" }}>
                 <div>
-                  <div className="hud-title" style={{ justifyContent: "center" }}>No target acquired</div>
+                  <div className="hud-title" style={{ justifyContent: "center" }}>No fund selected</div>
                   <p className="muted small" style={{ marginTop: 10 }}>Search a fund on the left to compute warm intro routes through your network.</p>
                 </div>
               </div>

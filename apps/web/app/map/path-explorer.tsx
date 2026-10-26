@@ -193,10 +193,6 @@ export default function PathExplorer({ graph, paths, targetId }: { graph: Graph;
               ctx.fillStyle = isTarget ? C.target : on ? C.text : "rgba(214,247,255,0.6)";
               const label = (node.kind === "me" ? "YOU" : node.label).toUpperCase();
               ctx.fillText(label.length > 34 ? label.slice(0, 33) + "…" : label, x, y + r + (isTarget ? 22 : 9) + fs);
-              if (isTarget) {
-                ctx.font = `${fs * 0.85}px ${MONO}`;
-                ctx.fillText("◎ TARGET", x, y - r - 20);
-              }
             }
             ctx.restore();
           }}
@@ -219,14 +215,14 @@ export default function PathExplorer({ graph, paths, targetId }: { graph: Graph;
           <div className="tl">Link analysis<br />{graph.nodes.length} nodes · {graph.edges.length} links</div>
           <div className="tr">Signal<br /><b style={{ color: "#fff", fontSize: 18 }}>{Math.round((active?.score ?? 0) * 100)}%</b></div>
           <div className="bl">Route {String(selected + 1).padStart(2, "0")} / {String(paths.length).padStart(2, "0")}<br />{(active?.edges.length ?? 1) - 1} hop{active?.edges.length === 2 ? "" : "s"} past your contact</div>
-          <div className="br"><span className="lock">◉ Target locked</span></div>
+          <div className="br"><span className="lock">◉ Routes computed</span></div>
         </div>
       </div>
       <div className="hud-legend">
         {(Object.keys(KIND_LABEL) as NodeKind[]).map((k) => (
           <span key={k}><i style={{ background: KIND_COLOR[k], color: KIND_COLOR[k] }} />{KIND_LABEL[k]}</span>
         ))}
-        <span><i style={{ background: C.target, color: C.target }} />Target</span>
+        <span><i style={{ background: C.target, color: C.target }} />Selected fund</span>
       </div>
 
       <h2 className="hud-title" style={{ marginTop: 10 }}>Intro routes · {paths.length}</h2>
