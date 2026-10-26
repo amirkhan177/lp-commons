@@ -8,6 +8,19 @@ const money = (v: string | null) =>
   v == null ? "—" : Number(v) >= 1e6 ? `$${(Number(v) / 1e6).toFixed(1)}M` : `$${Number(v).toLocaleString()}`;
 const pct = (v: number | null) => (v == null ? null : `${Math.round(v * 100)}%`);
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+// SEC EDGAR codes for non-US locations (US states use their usual abbreviations).
+const EDGAR_REGION: Record<string, string> = {
+  U0: "Singapore", K3: "Hong Kong", X0: "United Kingdom", E9: "Cayman Islands", F4: "China", L3: "Israel", M5: "South Korea",
+};
+const region = (codes: string) => codes.split(", ").map((c) => EDGAR_REGION[c] ?? c).join(", ");
+
+/** "Cambridge, MA"; "Singapore" rather than "Singapore, U0". */
+function place(city: string | null, state: string | null): string {
+  const country = state ? EDGAR_REGION[state] : undefined;
+  if (country) return city && city.toLowerCase() !== country.toLowerCase() ? `${city}, ${country}` : city ?? country;
+  return [city, state].filter(Boolean).join(", ");
+}
+
 const ROLE_LABEL: Record<string, string> = { manager: "Management company", general_partner: "General partner" };
 
 function FundNode({ f, self = false }: { f: OrgFund; self?: boolean }) {
@@ -24,38 +37,73 @@ function FundNode({ f, self = false }: { f: OrgFund; self?: boolean }) {
   );
 }
 
-function MemberCard({ m, org }: { m: Member; org: string }) {
+function PersonnelFile({ m, org }: { m: Member; org: string }) {
   const c = m.contact;
-  const role = [...(m.titles ?? []), ...(m.relationships ?? [])][0] ?? "Related person";
+  const roles = m.relationships ?? [];
+  const position = (m.titles ?? [])[0];
   return (
-    <div className={`member${c ? " yours" : ""}`}>
-      <div className="avatar" aria-hidden>
-        {c?.photo_url ? <img src={c.photo_url} alt="" loading="lazy" referrerPolicy="no-referrer" /> : initials(m.name)}
+    <article className={`file${c ? " linked" : ""}`} aria-label={`${m.name}, ${roles.join(", ") || "related person"}`}>
+      <span className="file-no">File {String(m.id).padStart(6, "0")}</span>
+      <div className="portrait" aria-hidden>
+        {c?.photo_url ? (
+          <>
+            <img src={c.photo_url} alt="" loading="lazy" referrerPolicy="no-referrer" />
+            <span className="tint" />
+          </>
+        ) : (
+          <>
+            <span className="mono">{initials(m.name)}</span>
+            <span className="cap">No image on file</span>
+          </>
+        )}
+        <span className="lines" />
+        <span className="ret" />
+        <span className="sweep" />
       </div>
       <div>
-        <div className="nm">{m.name}</div>
-        <div className="role">{role}</div>
-        {c && (
-          <div className="ln">
-            {c.headline ?? [c.position, c.company].filter(Boolean).join(" at ")}
-            {c.match_status === "possible" && <span className="badge warn">unconfirmed match</span>}
-          </div>
-        )}
-        <div className="ln">
-          {m.funds > 1 ? `On ${m.funds} funds here` : "On 1 fund here"}{m.state ? ` · ${m.state}` : ""}
-        </div>
-        <div className="links">
-          {c ? (
-            <>
-              <span className="badge ok">In your network</span>
-              {c.linkedin_url && <a href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn ↗</a>}
-            </>
-          ) : (
-            <a href={linkedinSearchUrl(m.name, org)} target="_blank" rel="noreferrer">Find on LinkedIn ↗</a>
-          )}
+        <div className="who">{m.name}</div>
+        {position && <div className="pos">{position}</div>}
+        <dl className="fields">
+          <dt>Role</dt><dd>{roles.join(" · ") || "Related person"}</dd>
+          <dt>Funds</dt><dd>{m.funds} {m.funds === 1 ? "fund" : "funds"} here</dd>
+          {m.state && <><dt>Region</dt><dd>{region(m.state)}</dd></>}
+          {c && (c.headline || c.company) && <><dt>Now</dt><dd>{c.headline ?? [c.position, c.company].filter(Boolean).join(" at ")}</dd></>}
+          <dt>Network</dt>
+          <dd className={c ? "ok" : undefined}>
+            {c ? (c.match_status === "possible" ? "Possible match — confirm in Your network" : "Your connection") : "Not connected"}
+          </dd>
+        </dl>
+        <div className="acts">
+          {c?.linkedin_url
+            ? <a href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn profile ↗</a>
+            : <a href={linkedinSearchUrl(m.name, org)} target="_blank" rel="noreferrer">Find on LinkedIn ↗</a>}
         </div>
       </div>
-    </div>
+    </article>
+  );
+}
+
+const TIERS: { title: string; test: (m: Member) => boolean }[] = [
+  { title: "Leadership", test: (m) => (m.relationships ?? []).includes("Executive Officer") },
+  { title: "Directors", test: (m) => (m.relationships ?? []).includes("Director") },
+  { title: "Other principals", test: () => true },
+];
+
+function Personnel({ members, org }: { members: Member[]; org: string }) {
+  const placed = new Set<number>();
+  return (
+    <>
+      {TIERS.map((t) => {
+        const group = members.filter((m) => !placed.has(m.id) && t.test(m));
+        group.forEach((m) => placed.add(m.id));
+        return group.length ? (
+          <div key={t.title} className="tier">
+            <div className="tier-head">{t.title} · {group.length}</div>
+            <div className="files">{group.map((m) => <PersonnelFile key={m.id} m={m} org={org} />)}</div>
+          </div>
+        ) : null;
+      })}
+    </>
   );
 }
 
@@ -81,7 +129,7 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
           <div className="hud-kicker">LP Commons // {org.kind === "manager" ? "Management company" : org.fund?.type === "fof" ? "Fund of funds" : "Fund"}</div>
           <h1 style={{ marginBottom: 0 }}>{org.name}</h1>
           <div className="org-meta">
-            {(org.city || org.state) && <span>{[org.city, org.state].filter(Boolean).join(", ")}</span>}
+            {(org.city || org.state) && <span>{place(org.city, org.state)}</span>}
             {org.cik && <span>CIK <b>{org.cik}</b></span>}
             {org.entity_form && <span>{org.entity_form}{org.jurisdiction ? ` · ${org.jurisdiction}` : ""}</span>}
             {org.kind === "manager" && <span><b>{org.funds.length}</b> funds · <b>{money(String(raisedTotal))}</b> raised</span>}
@@ -152,13 +200,13 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
       </section>
 
       <section className="org-section">
-        <h2 className="hud-title">People · {org.members.length}</h2>
+        <h2 className="hud-title">Personnel · {org.members.length}</h2>
         <p className="muted small">
           From related persons named on Form D filings. LinkedIn details appear only for people who are your own
           connections; for anyone else, use LinkedIn&apos;s own search.
         </p>
         {org.members.length ? (
-          <div className="team">{org.members.map((m) => <MemberCard key={m.id} m={m} org={org.name} />)}</div>
+          <Personnel members={org.members} org={org.name} />
         ) : (
           <p className="muted">No individuals named on these filings.</p>
         )}
