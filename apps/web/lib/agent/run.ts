@@ -3,20 +3,26 @@ import { after } from "next/server";
 import { db, WORKSPACE_ID } from "../db";
 import { reachAll } from "../graph/reach";
 import { notify } from "../notify";
+import { mappingNotice } from "../schedule";
 import { loadNetworkGraph } from "./network";
 
-export type Trigger = "linkedin_import" | "linkedin_agent" | "google_sync" | "match_review" | "manual" | "startup";
+export type Trigger = "linkedin_import" | "linkedin_agent" | "google_sync" | "match_review" | "manual" | "startup"
+  | "new_filings" | "weekly";
 
 const LOCK_KEY = 72_610_001; // pg advisory lock: one mapping run at a time per database
 
-/** Queue a mapping run (coalesced with one already waiting) and process the queue after the response. */
-export async function enqueueMapping(trigger: Trigger): Promise<void> {
+/**
+ * Queue a mapping run (coalesced with one already waiting) and process the queue: after the
+ * response inside a request, or straight away from background jobs (`inRequest: false`).
+ */
+export async function enqueueMapping(trigger: Trigger, { inRequest = true }: { inRequest?: boolean } = {}): Promise<void> {
   await db().query(
     `INSERT INTO mapping_runs (workspace_id, trigger)
      SELECT $1, $2 WHERE NOT EXISTS (SELECT 1 FROM mapping_runs WHERE workspace_id = $1 AND status = 'queued')`,
     [WORKSPACE_ID, trigger],
   );
-  after(() => processQueue());
+  if (inRequest) after(() => processQueue());
+  else void processQueue().catch((e) => console.error("mapping queue", e));
 }
 
 /**
@@ -34,23 +40,21 @@ export async function processQueue(): Promise<void> {
         `UPDATE mapping_runs SET status = 'failed', finished_at = now(), error = 'interrupted (server restarted)'
          WHERE status = 'running'`);
       for (;;) {
-        const run = (await client.query<{ id: number }>(
+        const run = (await client.query<{ id: number; trigger: Trigger }>(
           `UPDATE mapping_runs SET status = 'running', started_at = now()
            WHERE id = (SELECT id FROM mapping_runs WHERE workspace_id = $1 AND status = 'queued' ORDER BY id LIMIT 1)
-           RETURNING id`, [WORKSPACE_ID])).rows[0];
+           RETURNING id, trigger`, [WORKSPACE_ID])).rows[0];
         if (!run) break;
         try {
+          const before = (await client.query<{ n: number | null }>(
+            `SELECT (stats->>'funds_reachable')::int AS n FROM mapping_runs
+             WHERE workspace_id = $1 AND status = 'done' ORDER BY id DESC LIMIT 1`, [WORKSPACE_ID])).rows[0]?.n ?? 0;
           const stats = await mapNetwork(run.id);
           await client.query(
             "UPDATE mapping_runs SET status = 'done', finished_at = now(), stats = $2 WHERE id = $1",
             [run.id, JSON.stringify(stats)]);
-          await notify(
-            "Your intro map is ready",
-            stats.funds_reachable
-              ? `${stats.funds_reachable} active funds are reachable through your network, ${stats.strong_paths} with a strong path.`
-              : "No active funds are reachable yet. Import more of your network or review possible matches.",
-            "/reach",
-          );
+          const message = mappingNotice(run.trigger, before, stats);
+          if (message) await notify(message.title, message.body, "/reach");
         } catch (e) {
           console.error("mapping run failed", e);
           await client.query(

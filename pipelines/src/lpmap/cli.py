@@ -4,7 +4,7 @@ import logging
 import sys
 from datetime import date
 
-from . import config, db, pipeline
+from . import config, db, notify_web, pipeline
 from .sec_client import SecClient
 
 
@@ -39,6 +39,7 @@ def main(argv: list[str] | None = None) -> int:
         with SecClient(cfg.sec_user_agent, cfg.sec_max_rps) as sec:
             if args.cmd == "sync":
                 stats = pipeline.sync(conn, sec, cfg.formd_backfill_from, max_quarters=args.max_quarters)
+                notify_web.filings_updated(notify_web.new_filings_count(stats))
             elif args.cmd == "reprocess":
                 conn.execute("DELETE FROM ingest_state WHERE source IN (%s, %s)", (pipeline.BULK_SOURCE, pipeline.DAILY_SOURCE))
                 conn.commit()

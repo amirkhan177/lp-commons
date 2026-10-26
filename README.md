@@ -55,6 +55,16 @@ processed in the background (Postgres-backed queue, one run at a time, resumed a
 computes your best intro path to **every active fund** (vintage ≥ 2016, non-SPV) at once and writes
 the results to *Reach*, then notifies you in-app — and by email if Resend is configured.
 
+### Keeping data fresh
+
+- **Filings:** the `edgar-scraper` cron runs `lpmap sync` every 6 hours (new daily filings and
+  amendments; new quarterly bulk sets are picked up automatically). After a run that adds filings
+  it calls the web app (`/api/internal/filings-updated`, shared secret) to re-map your intro paths.
+- **Web scheduler** (hourly tick in the web process, tracked in `scheduled_jobs`): freshness check
+  every 6 hours (alerts once a day if the newest filing is more than 3 business days old), weekly
+  re-map, weekly Google sync, and a Monday digest of funds that started raising that week.
+- Background re-maps only notify you when more funds became reachable.
+
 ### Google contacts & calendar (optional)
 
 Read-only OAuth (contacts, "other contacts" = people you've emailed, calendar events). Only names,
