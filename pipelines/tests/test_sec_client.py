@@ -84,6 +84,15 @@ def test_backs_off_and_retries_on_rate_limit(first):
     assert len(calls) == 2 and sleeps == [5]
 
 
+def test_s3_access_denied_403_means_missing_file():
+    body = ('<?xml version="1.0" encoding="UTF-8"?>\n<Error><Code>AccessDenied</Code>'
+            '<Message>Access Denied</Message></Error>')
+    client, sleeps = _client(lambda req: httpx.Response(403, text=body))
+    with pytest.raises(NotFound):
+        client.get("https://www.sec.gov/Archives/edgar/daily-index/2026/QTR4/master.20261012.idx")
+    assert sleeps == []
+
+
 def test_plain_403_is_not_retried():
     client, _ = _client(lambda req: httpx.Response(403, text="Undeclared Automated Tool"))
     with pytest.raises(httpx.HTTPStatusError):

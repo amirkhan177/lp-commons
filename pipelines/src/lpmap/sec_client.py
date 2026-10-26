@@ -72,7 +72,7 @@ class SecClient:
                 log.warning("transport error on %s: %s (retry %d)", url, exc, attempt + 1)
                 self._sleep(min(2 ** attempt, 60))
                 continue
-            if resp.status_code == 404:
+            if resp.status_code == 404 or _is_missing_object_403(resp):
                 raise NotFound(url)
             if resp.status_code in RETRY_STATUSES or _is_rate_limited_403(resp):
                 if attempt == self.max_retries:
@@ -93,6 +93,12 @@ class SecClient:
 
     def __exit__(self, *exc):
         self.close()
+
+
+def _is_missing_object_403(resp: httpx.Response) -> bool:
+    """sec.gov/Archives is S3-backed: a file that doesn't exist (e.g. a holiday's daily index)
+    comes back as 403 with an S3 AccessDenied XML body, not 404. SEC's real blocks are HTML."""
+    return resp.status_code == 403 and "<Code>AccessDenied</Code>" in resp.text
 
 
 def _is_rate_limited_403(resp: httpx.Response) -> bool:
