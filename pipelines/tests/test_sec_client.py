@@ -4,7 +4,7 @@ import pytest
 from lpmap.config import ConfigError
 from lpmap.sec_client import NotFound, RateLimiter, SecClient
 
-UA = "OpenPitchBook test@example.com"
+UA = "LP Commons test@example.com"
 
 
 class FakeClock:
@@ -38,7 +38,7 @@ def test_rate_limiter_hard_caps_configured_rate_at_10():
 
 def test_user_agent_requires_contact_email():
     with pytest.raises(ConfigError):
-        SecClient("OpenPitchBook")
+        SecClient("LP Commons")
 
 
 def _client(handler, **kw):

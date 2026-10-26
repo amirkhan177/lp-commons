@@ -10,7 +10,7 @@ from lpmap import db, pipeline
 from lpmap.sec_client import RateLimiter, SecClient
 from lpmap.sources import formd
 
-UA = "OpenPitchBook test@example.com"
+UA = "LP Commons test@example.com"
 
 
 def _entry(acc="0001999001-25-000002", filed=date(2025, 10, 1)):

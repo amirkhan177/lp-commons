@@ -9,7 +9,7 @@ from .sec_client import SecClient
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="lpmap", description="OpenPitchBook data pipelines")
+    parser = argparse.ArgumentParser(prog="lpmap", description="LP Commons data pipelines")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("migrate", help="apply pending SQL migrations")
     s = sub.add_parser("sync", help="migrate, backfill Form D bulk quarters, catch up daily filings")

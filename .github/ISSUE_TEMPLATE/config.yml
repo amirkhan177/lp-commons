@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability or private request
-    url: https://github.com/amirkhan177/OpenPitchBook/security/advisories/new
+    url: https://github.com/amirkhan177/lp-commons/security/advisories/new
     about: Security issues, and privacy or conduct reports you don't want to make public.

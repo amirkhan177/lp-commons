@@ -7,8 +7,8 @@ body:
       value: |
         **This issue is public.** Do not include phone numbers, email addresses, home addresses,
         or ID documents. If your request involves information you don't want public, use
-        [private reporting](https://github.com/amirkhan177/OpenPitchBook/security/advisories/new)
-        instead and say it's a privacy request. See [PRIVACY.md](https://github.com/amirkhan177/OpenPitchBook/blob/main/PRIVACY.md).
+        [private reporting](https://github.com/amirkhan177/lp-commons/security/advisories/new)
+        instead and say it's a privacy request. See [PRIVACY.md](https://github.com/amirkhan177/lp-commons/blob/main/PRIVACY.md).
   - type: dropdown
     id: kind
     attributes:

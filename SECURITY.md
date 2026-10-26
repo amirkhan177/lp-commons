@@ -22,7 +22,7 @@ those to their owners — and instances run by other operators.
 
 ## Operator checklist
 
-If you deploy OpenPitchBook:
+If you deploy LP Commons:
 
 - Keep secrets (`DATABASE_URL`, `SEC_USER_AGENT`, Clay/Anthropic keys) in your host's secret
   store, never in the repo. `.env` is gitignored.

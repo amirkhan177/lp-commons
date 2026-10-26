@@ -1,6 +1,6 @@
 # Privacy
 
-OpenPitchBook works with two very different kinds of data. They are kept apart on purpose.
+LP Commons works with two very different kinds of data. They are kept apart on purpose.
 
 ## 1. Public dataset (from public filings)
 

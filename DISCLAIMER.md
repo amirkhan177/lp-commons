@@ -1,11 +1,11 @@
 # Disclaimer
 
-**Read this before using OpenPitchBook, its code, its data, or any hosted instance of it.**
+**Read this before using LP Commons, its code, its data, or any hosted instance of it.**
 By using any of them you accept these terms. If you don't accept them, don't use the project.
 
 ## 1. Not advice, not an offer
 
-OpenPitchBook is a software tool and a compilation of public information. It is **not**
+LP Commons is a software tool and a compilation of public information. It is **not**
 investment, financial, legal, tax, accounting, or regulatory advice, and nothing in it is a
 recommendation to invest in, or raise money for, any fund, company, or security.
 
@@ -55,10 +55,9 @@ Reporting Act or any similar law.
 
 ## 4. No affiliation; trademarks
 
-OpenPitchBook is an independent open-source project. It is **not affiliated with, endorsed by,
-or sponsored by** PitchBook Data, Inc. or Morningstar, Inc.; the U.S. Securities and Exchange
-Commission or EDGAR; LinkedIn; Clay; Anthropic; Railway; GitHub; or any fund, investor, or
-company that appears in the data. "PitchBook" is a trademark of PitchBook Data, Inc. All other
+LP Commons is an independent open-source project. It is **not affiliated with, endorsed by,
+or sponsored by** the U.S. Securities and Exchange Commission or EDGAR; LinkedIn; Clay;
+Anthropic; Railway; GitHub; or any fund, investor, or company that appears in the data. All
 names and marks belong to their respective owners and are used only to identify them.
 
 The SEC does not endorse this project or vouch for the accuracy of data derived from EDGAR.

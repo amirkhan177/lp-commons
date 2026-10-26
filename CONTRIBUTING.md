@@ -1,4 +1,4 @@
-# Contributing to OpenPitchBook
+# Contributing to LP Commons
 
 Thanks for helping. Issues, data fixes, new data sources, and code are all welcome.
 
