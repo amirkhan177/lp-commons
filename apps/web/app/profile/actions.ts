@@ -8,7 +8,7 @@ import { requireSession } from "@/lib/session";
 import { draftProfile } from "@/lib/thesis/draft";
 import { pdfToText } from "@/lib/thesis/extract";
 import { computeFitAfterResponse } from "@/lib/thesis/fit-run";
-import { checkKey, DEFAULT_MODEL } from "@/lib/thesis/openrouter";
+import { checkKey, DEFAULT_MODEL, FALLBACK_MODEL } from "@/lib/thesis/openrouter";
 import { cleanDraft, geoIds, lpTypeIds, parseMoney, sectorIds, stageIds } from "@/lib/thesis/taxonomy";
 
 const MAX_DECK_BYTES = 15 * 1024 * 1024;
@@ -83,9 +83,13 @@ export async function draft(formData: FormData) {
     [WORKSPACE_ID, d.fund_name, website || null, d.summary, d.sectors, d.stages, d.geographies, d.fund_number,
      d.target_size, d.check_min, d.check_max, d.lp_types, d.keywords, JSON.stringify({ ...d, pages: result!.pages }), result!.source]);
   revalidatePath("/profile");
-  msg("ok", result!.source === "llm"
-    ? "Draft ready. Review every field, then confirm."
-    : "Draft ready from keywords (add an OpenRouter key for a better one). Review every field, then confirm.");
+  const r = result!;
+  if (r.llmError) msg("error", `AI draft failed, so this draft comes from keywords. ${r.llmError}`);
+  msg("ok", r.source === "keywords"
+    ? "Draft ready from keywords (add an OpenRouter key for a better one). Review every field, then confirm."
+    : r.model === FALLBACK_MODEL
+      ? `Your model wasn't available, so the free ${FALLBACK_MODEL} drafted this. Review every field, then confirm.`
+      : "Draft ready. Review every field, then confirm.");
 }
 
 export async function confirm(formData: FormData) {

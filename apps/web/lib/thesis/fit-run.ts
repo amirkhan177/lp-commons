@@ -66,7 +66,7 @@ export async function computeFit(): Promise<{ fofs: number; peers: number; reran
       };
       try {
         const answer = parseJson<{ id: number; score: number; reason: string }[]>(
-          await chat(llm.key, llm.model, RERANK_SYSTEM, JSON.stringify(brief), 3000));
+          (await chat(llm.key, llm.model, RERANK_SYSTEM, JSON.stringify(brief), 3000)).text);
         const allowed = new Set(top.map((t) => t.c.id));
         notes = new Map(answer.filter((a) => allowed.has(Number(a.id)) && Number.isFinite(Number(a.score)))
           .map((a) => [Number(a.id), { score: Number(a.score), reason: String(a.reason ?? "").slice(0, 160) }]));

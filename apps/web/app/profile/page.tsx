@@ -56,7 +56,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           Bring your own <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">OpenRouter key</a> to use any
           model (Claude, GPT, Gemini, Llama…). It drafts your profile and explains the top 50 matches; you pay OpenRouter
           directly. The key is encrypted at rest and never shown again. Only your profile and public fund data are sent to
-          the model, never your contacts. Without a key, drafting uses keyword detection.
+          the model, never your contacts. If your model can&apos;t be served, the free NVIDIA Nemotron 3 Nano Omni is tried
+          once. Without a key, drafting uses keyword detection.
         </p>
         {keyRow ? (
           <div className="stack">

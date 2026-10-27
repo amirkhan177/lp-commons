@@ -48,7 +48,7 @@ check_min and check_max (USD numbers), lp_types, keywords (up to 10 specific the
 Use null for anything the material doesn't support. Never invent numbers.`;
 
 export async function draftProfile(input: { website?: string; deckText?: string }):
-  Promise<{ draft: FundProfileDraft; source: "llm" | "keywords"; pages: string[] }> {
+  Promise<{ draft: FundProfileDraft; source: "llm" | "keywords"; pages: string[]; model?: string; llmError?: string }> {
   let site = { text: "", title: "", pages: [] as string[] };
   if (input.website) site = await readWebsite(input.website);
   const material = [site.text, input.deckText ? `# Pitch deck\n${input.deckText}` : ""].filter(Boolean).join("\n\n").slice(0, MAX_CONTEXT);
@@ -56,6 +56,12 @@ export async function draftProfile(input: { website?: string; deckText?: string 
 
   const llm = await getLlm();
   if (!llm) return { draft: keywordDraft(site.title, material), source: "keywords", pages: site.pages };
-  const answer = await chat(llm.key, llm.model, SYSTEM, material, 1200);
-  return { draft: cleanDraft(parseJson(answer)), source: "llm", pages: site.pages };
+  try {
+    const answer = await chat(llm.key, llm.model, SYSTEM, material, 1200);
+    return { draft: cleanDraft(parseJson(answer.text)), source: "llm", pages: site.pages, model: answer.model };
+  } catch (e) {
+    // The model failed (blocked providers, bad JSON…): still give the GP a keyword draft, and say why.
+    const llmError = e instanceof Error ? e.message : String(e);
+    return { draft: keywordDraft(site.title, material), source: "keywords", pages: site.pages, llmError };
+  }
 }

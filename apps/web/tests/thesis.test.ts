@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { htmlToText, relevantLinks } from "@/lib/thesis/extract";
 import { blend, scoreFit, type Candidate } from "@/lib/thesis/fit";
 import { checkUrl, isPublicAddress } from "@/lib/thesis/net";
-import { maskKey, parseJson } from "@/lib/thesis/openrouter";
+import { errorDetail, friendlyError, maskKey, modelUnavailable, parseJson } from "@/lib/thesis/openrouter";
 import { cleanDraft, keywordDraft, sectorsIn, type FundProfileDraft } from "@/lib/thesis/taxonomy";
 
 const profile: FundProfileDraft = {
@@ -94,5 +94,18 @@ describe("fit", () => {
     expect(blend(50, null)).toBe(50);
     expect(blend(50, 100)).toBe(80);
     expect(sectorsIn("GC AI Health Fund")).toEqual(["ai", "health"]);
+  });
+});
+
+describe("openrouter errors", () => {
+  it("detects models that can't be served and explains them", () => {
+    const body = '{"error":{"message":"No allowed providers are available for the selected model."}}';
+    expect(errorDetail(body)).toBe("No allowed providers are available for the selected model.");
+    expect(modelUnavailable(404, errorDetail(body))).toBe(true);
+    expect(modelUnavailable(400, "anthropic/foo is not a valid model ID")).toBe(true);
+    expect(modelUnavailable(402, "Insufficient credits")).toBe(false);
+    expect(modelUnavailable(401, "bad key")).toBe(false);
+    expect(friendlyError(404, errorDetail(body))).toMatch(/settings\/privacy/);
+    expect(friendlyError(402, "")).toMatch(/credits/);
   });
 });

@@ -2,6 +2,8 @@
 
 const BASE = "https://openrouter.ai/api/v1";
 export const DEFAULT_MODEL = "openrouter/auto";
+/** Free model tried once when the GP's chosen model can't be served (blocked providers, no endpoints, rate limits). */
+export const FALLBACK_MODEL = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free";
 
 let modelCache: { at: number; ids: string[] } | null = null;
 
@@ -44,26 +46,67 @@ export async function checkKey(key: string): Promise<{ ok: boolean; limit: numbe
   }
 }
 
-export async function chat(key: string, model: string, system: string, user: string, maxTokens = 1500): Promise<string> {
+/** OpenRouter's own error message from a failed response body, if it has one. */
+export function errorDetail(body: string): string {
+  try {
+    const msg = JSON.parse(body)?.error?.message;
+    if (typeof msg === "string" && msg.trim()) return msg.trim();
+  } catch { /* not JSON */ }
+  return body.trim();
+}
+
+/** True when the request failed because this model can't be served right now, so another model may work. */
+export function modelUnavailable(status: number, detail: string): boolean {
+  return [404, 429, 502, 503].includes(status) || /no (allowed )?(providers|endpoints)|not a valid model|model .*not (found|available)/i.test(detail);
+}
+
+export function friendlyError(status: number, detail: string): string {
+  if (status === 401 || status === 403) return "OpenRouter rejected the key. Check it under openrouter.ai/keys.";
+  if (status === 402) return "OpenRouter: out of credits on this key.";
+  if (/no allowed providers/i.test(detail)) {
+    return "OpenRouter blocked every provider for this model. Check Allowed/Ignored providers and data policy under openrouter.ai/settings/privacy, or the key's guardrails.";
+  }
+  if (status === 429) return "OpenRouter rate limit reached. Try again in a minute.";
+  return `OpenRouter ${status}: ${detail.slice(0, 160)}`;
+}
+
+async function chatOnce(key: string, model: string, system: string, user: string, maxTokens: number) {
+  // The fallback is a reasoning model: keep its thinking short and out of the answer, and leave room for it.
+  const reasoning = model === FALLBACK_MODEL ? { reasoning: { effort: "low", exclude: true } } : {};
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST",
     headers: headers(key),
     body: JSON.stringify({
-      model: model || DEFAULT_MODEL,
+      model,
       temperature: 0.2,
-      max_tokens: maxTokens,
+      max_tokens: model === FALLBACK_MODEL ? maxTokens + 4000 : maxTokens,
       messages: [{ role: "system", content: system }, { role: "user", content: user }],
+      ...reasoning,
     }),
     cache: "no-store",
   });
   if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`OpenRouter ${res.status}${res.status === 402 ? " (out of credits)" : ""}: ${detail.slice(0, 200)}`);
+    const detail = errorDetail(await res.text().catch(() => ""));
+    return { ok: false as const, status: res.status, detail };
   }
   const body = await res.json();
   const content = body?.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) throw new Error("The model returned an empty answer.");
-  return content;
+  if (typeof content !== "string" || !content.trim()) return { ok: false as const, status: 0, detail: "The model returned an empty answer." };
+  return { ok: true as const, text: content };
+}
+
+/** Chat with the GP's model; if it can't be served, retry once on the free fallback model. */
+export async function chat(key: string, model: string, system: string, user: string, maxTokens = 1500):
+  Promise<{ text: string; model: string }> {
+  const chosen = model || DEFAULT_MODEL;
+  const first = await chatOnce(key, chosen, system, user, maxTokens);
+  if (first.ok) return { text: first.text, model: chosen };
+  if (chosen !== FALLBACK_MODEL && (first.status === 0 || modelUnavailable(first.status, first.detail))) {
+    const second = await chatOnce(key, FALLBACK_MODEL, system, user, maxTokens);
+    if (second.ok) return { text: second.text, model: FALLBACK_MODEL };
+    throw new Error(`${friendlyError(first.status, first.detail)} The free fallback (${FALLBACK_MODEL}) also failed: ${friendlyError(second.status, second.detail)}`);
+  }
+  throw new Error(first.status === 0 ? first.detail : friendlyError(first.status, first.detail));
 }
 
 /** First JSON object/array in a model's answer (tolerates ```json fences and chatter). */
