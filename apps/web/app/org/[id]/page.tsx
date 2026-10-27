@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Nav from "../../nav";
 import { getOrg, linkedinSearchUrl, type Member, type OrgFund } from "@/lib/org";
 import { requireSession } from "@/lib/session";
+import { db, WORKSPACE_ID } from "@/lib/db";
 
 const money = (v: string | null) =>
   v == null ? "—" : Number(v) >= 1e6 ? `$${(Number(v) / 1e6).toFixed(1)}M` : `$${Number(v).toLocaleString()}`;
@@ -120,6 +121,8 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
   const bestFund = org.kind === "fund" ? org.fund : org.funds.filter((f) => f.reach != null).sort((a, b) => b.reach! - a.reach!)[0];
   const raisedTotal = org.funds.reduce((s, f) => s + Number(f.total_amount_sold ?? 0), 0);
   const inNetwork = org.members.filter((m) => m.contact).length;
+  const fit = (await db().query<{ score: number; reasons: string[]; llm_note: string | null; kind: string }>(
+    "SELECT score, reasons, llm_note, kind FROM fund_fit WHERE workspace_id = $1 AND entity_id = $2", [WORKSPACE_ID, org.id])).rows[0];
 
   return (
     <div className="shell">
@@ -138,6 +141,13 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
           </div>
         </div>
         <div className="org-route">
+          {fit && (
+            <div style={{ marginBottom: 12 }}>
+              <div className="hud-kicker">Thesis fit</div>
+              <div className="big" style={{ fontSize: 22 }}>{fit.score}<span className="muted small"> / 100</span></div>
+              <div className="muted small" style={{ maxWidth: 320, marginLeft: "auto" }}>{fit.llm_note ?? fit.reasons.join(" · ")}</div>
+            </div>
+          )}
           <div className="hud-kicker">Your best route</div>
           {best != null && bestFund ? (
             <>

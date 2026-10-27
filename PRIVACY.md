@@ -50,6 +50,12 @@ You can delete your workspace's imported data at any time; deleting a workspace 
 contacts and edges (`ON DELETE CASCADE`). Disconnecting Google revokes access and deletes every
 Google-sourced contact. Integration tokens are encrypted at rest.
 
+**Your fund profile and AI key (optional).** The profile you confirm, and the website text or deck
+used to draft it, are used only to rank funds for you; the deck is read once and not stored. If you
+add an OpenRouter API key it is encrypted at rest and used only for your own requests; OpenRouter
+and the model provider you choose then process your profile and public fund data under their
+terms. Your contacts and network are never sent to a model.
+
 **LinkedIn agent (opt-in).** If you connect it, you sign in to LinkedIn yourself in a browser
 window running on the server; keystrokes are passed to LinkedIn and never logged or stored. The
 resulting session cookies are encrypted with a key held **only by the agent service** (derived

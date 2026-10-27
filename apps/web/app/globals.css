@@ -477,3 +477,16 @@ html, body { background: #03070c; color-scheme: dark; }
 .filter-actions { display: flex; gap: 12px; align-items: center; }
 .filter-hint { flex-basis: 100%; margin: 0; font-size: 11px; color: var(--hud-muted); }
 @media (max-width: 600px) { .filter-bar label { flex: 1 1 140px; } .filter-bar select { width: 100%; } }
+
+/* ---- Fund profile form ---- */
+.profile-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; margin-top: 12px; }
+.profile-form .wide { grid-column: 1 / -1; }
+.profile-form label { display: grid; gap: 4px; }
+.profile-form label > span, .profile-form legend { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--hud-muted); }
+.profile-form fieldset { border: 1px solid var(--hud-line); padding: 8px 10px 10px; margin: 0; }
+.hud textarea, .hud input[type="number"] { font-family: var(--hud-mono); font-size: 13px; color: var(--hud-text); background: rgba(0, 10, 16, 0.85); border: 1px solid var(--hud-line-strong); border-radius: 0; padding: 9px 12px; width: 100%; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-opt { display: inline-flex !important; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--hud-line); cursor: pointer; font-size: 12px; }
+.chip-opt:has(input:checked) { border-color: var(--hud-cyan); background: rgba(0, 229, 255, 0.1); color: var(--hud-cyan); }
+.chip-opt input { margin: 0; }
+@media (max-width: 700px) { .profile-form { grid-template-columns: 1fr; } }

@@ -55,6 +55,20 @@ processed in the background (Postgres-backed queue, one run at a time, resumed a
 computes your best intro path to **every active fund** (vintage ≥ 2016, non-SPV) at once and writes
 the results to *Reach*, then notifies you in-app — and by email if Resend is configured.
 
+### Fund profile & thesis matching
+
+During setup the GP pastes their website (and optionally a PDF deck). LP Commons drafts a
+structured profile — sectors, stage, geography, fund number and size, check size, LP types
+wanted — and the GP edits and **confirms** it; matching only uses the confirmed profile.
+
+- **Any model, the GP's own key:** an optional [OpenRouter](https://openrouter.ai) key (encrypted
+  at rest, verified on save, model selectable) drafts the profile and reviews/explains the top 50
+  matches. Without a key, drafting uses keyword detection and scoring is fully deterministic.
+- **Matches** ranks funds of funds (potential LPs) and peer funds (co-investors and intro bridges)
+  by thesis fit, defaulting to strong fits with "show all" one click away — nothing is hidden.
+- Only the GP's own profile and public fund data are sent to the model; never their contacts.
+  Website fetches are limited to public http(s) addresses, with size and time limits.
+
 ### Keeping data fresh
 
 - **Filings:** the `edgar-scraper` cron runs `lpmap sync` every 6 hours (new daily filings and

@@ -18,6 +18,7 @@ export default async function Nav() {
       <Link href="/reach" className="brand">LP Commons</Link>
       <nav>
         <Link href="/reach">Reach{unread > 0 && <span className="badge ok" title="New results">{unread} new</span>}</Link>
+        <Link href="/matches">Matches</Link>
         <Link href="/map">Path mapper</Link>
         <Link href="/import">Your network</Link>
         <Link href="/settings">Settings</Link>

@@ -32,7 +32,7 @@ export async function getOnboarding(): Promise<Onboarding> {
   const r = (await pool.query<{
     onboarded: boolean; latest_filing: string | null; funds: string; linkedin: string; google_contacts: string;
     possible: string; matched: string; li_status: string | null; google_connected: boolean;
-    run_status: string | null; reach: string; best: number | null;
+    run_status: string | null; reach: string; best: number | null; profile: string | null; fit: string;
   }>(`
     SELECT
       (SELECT onboarded_at IS NOT NULL FROM workspaces WHERE id = $1) AS onboarded,
@@ -46,7 +46,9 @@ export async function getOnboarding(): Promise<Onboarding> {
       EXISTS (SELECT 1 FROM integrations WHERE workspace_id = $1 AND provider = 'google') AS google_connected,
       (SELECT status FROM mapping_runs WHERE workspace_id = $1 ORDER BY id DESC LIMIT 1) AS run_status,
       (SELECT count(*) FROM fund_reach WHERE workspace_id = $1) AS reach,
-      (SELECT entity_id FROM fund_reach WHERE workspace_id = $1 ORDER BY best_score DESC LIMIT 1) AS best`,
+      (SELECT entity_id FROM fund_reach WHERE workspace_id = $1 ORDER BY best_score DESC LIMIT 1) AS best,
+      (SELECT CASE WHEN confirmed_at IS NOT NULL THEN 'confirmed' ELSE 'draft' END FROM fund_profile WHERE workspace_id = $1) AS profile,
+      (SELECT count(*) FROM fund_fit WHERE workspace_id = $1 AND score >= 70) AS fit`,
     [WORKSPACE_ID])).rows[0];
 
   const n = (v: string) => Number(v).toLocaleString();
@@ -61,6 +63,16 @@ export async function getOnboarding(): Promise<Onboarding> {
       detail: r.latest_filing
         ? `${n(r.funds)} VC funds and funds-of-funds from SEC Form D, updated through ${r.latest_filing}.`
         : "The SEC Form D database is still loading. This step completes on its own.",
+    },
+    {
+      id: "profile", title: "Describe your fund", required: true,
+      state: r.profile === "confirmed" ? "done" : "ready",
+      detail: r.profile === "confirmed"
+        ? `Thesis confirmed. ${n(r.fit)} funds of funds and peer funds are a strong fit.`
+        : r.profile === "draft"
+          ? "A draft is waiting for your review. Confirm it to rank funds against your thesis."
+          : "Paste your website (and optionally your deck). We draft your thesis, you confirm it, and every fund is ranked by fit. Optional: bring your own OpenRouter key to use any AI model.",
+      href: "/profile",
     },
   ];
   // One LinkedIn step. With the agent available it's the main path (it reads the connections list
@@ -117,12 +129,12 @@ export async function getOnboarding(): Promise<Onboarding> {
 
   // A network source counts as required: at least one of the network steps must be done.
   const networkDone = hasNetwork || r.li_status === "connected";
-  const required = [steps[0], steps.find((s) => s.id === "map")!];
+  const required = [steps[0], steps.find((s) => s.id === "profile")!, steps.find((s) => s.id === "map")!];
   const doneCount = required.filter((s) => s.state === "done").length + (networkDone ? 1 : 0);
   const progress = doneCount / (required.length + 1);
 
   return {
-    steps, progress, ready: networkDone && mapped, agent, onboarded: r.onboarded, bestFundId: r.best, mapping,
+    steps, progress, ready: networkDone && mapped && r.profile === "confirmed", agent, onboarded: r.onboarded, bestFundId: r.best, mapping,
   };
 }
 
