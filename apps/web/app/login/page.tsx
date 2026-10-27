@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { authConfigured, checkPassword, createSessionToken, SESSION_TTL_SECONDS } from "@/lib/auth";
 import { SESSION_COOKIE } from "@/lib/constants";
-import { Icon } from "../ui/icons";
+import { Logo } from "../ui/logo";
 import { Notice } from "../ui/shell";
 import { SubmitButton } from "../ui/forms";
 
@@ -32,7 +32,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="auth-form">
         <div>
           <div className="row" style={{ gap: 10 }}>
-            <span className="logo"><Icon name="link" size={18} /></span>
+            <Logo size={40} />
             <b style={{ fontSize: 18, color: "var(--text)" }}>LP Commons</b>
           </div>
           <h1>Welcome back</h1>

@@ -5,6 +5,7 @@ import { SESSION_COOKIE } from "@/lib/constants";
 import { unreadCount } from "@/lib/notify";
 import { isOnboarded } from "@/lib/onboarding";
 import { Icon } from "./icons";
+import { Logo } from "./logo";
 import { MenuButton, NavLink, Scrim, ThemeToggle } from "./shell-client";
 
 async function logout() {
@@ -24,7 +25,7 @@ export function ShellFrame({ unread = 0, onboarded = true, children }: { unread?
   return (
     <div className="app">
       <aside className="sidebar" aria-label="Main navigation">
-        <Link href="/reach" className="brand"><span className="logo"><Icon name="link" size={18} /></span>LP Commons</Link>
+        <Link href="/reach" className="brand"><Logo size={32} />LP Commons</Link>
         <nav className="side-nav">
           <div className="side-group">
             <div className="side-label">Fundraise</div>

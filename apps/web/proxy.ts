@@ -11,5 +11,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!login|api/internal|_next/static|_next/image|favicon.ico).*)"],
+  // Icons and the web manifest are public so the sign-in page and home-screen installs can load them.
+  matcher: ["/((?!login|api/internal|_next/static|_next/image|favicon.ico|icon|apple-icon|manifest.webmanifest).*)"],
 };
