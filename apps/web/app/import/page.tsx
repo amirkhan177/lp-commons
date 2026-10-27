@@ -8,6 +8,7 @@ import { deleteAllContacts, setMatchDecision } from "@/lib/import";
 import { uploadConnections } from "./actions";
 import { requireSession } from "@/lib/session";
 import { enqueueMapping } from "@/lib/agent/run";
+import { ConfirmButton, SubmitButton } from "../ui/forms";
 
 async function decide(formData: FormData) {
   "use server";
@@ -89,7 +90,7 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
         <form action={uploadConnections} className="row">
           <input type="hidden" name="returnTo" value="/import" />
           <input type="file" name="file" accept=".csv,text/csv" required aria-label="Connections.csv" />
-          <button type="submit"><Icon name="upload" size={16} />Import connections</button>
+          <SubmitButton icon="upload" pending="Importing…">Import connections</SubmitButton>
         </form>
       </section>
 
@@ -133,8 +134,8 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
                       {m.match_status !== "confirmed" && (
                         <form action={decide} className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
                           <input type="hidden" name="contactId" value={m.id} />
-                          <button name="decision" value="confirmed" className="secondary sm" type="submit">Same person</button>
-                          <button name="decision" value="rejected" className="ghost sm" type="submit">Not them</button>
+                          <SubmitButton name="decision" value="confirmed" className="secondary sm">Same person</SubmitButton>
+                          <SubmitButton name="decision" value="rejected" className="ghost sm">Not them</SubmitButton>
                         </form>
                       )}
                     </td>
@@ -149,10 +150,13 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
       <section className="card section stack">
         <h2>Delete your data</h2>
         <p className="muted small">Removes every imported connection and your match decisions from this instance. This can&apos;t be undone.</p>
-        <form action={wipe} className="stack">
-          <label className="check"><input type="checkbox" required /> I understand this permanently deletes my imported connections and match decisions.</label>
-          <div><button className="danger" type="submit"><Icon name="trash" size={16} />Delete all imported contacts</button></div>
-        </form>
+        <div>
+          <ConfirmButton action={wipe} label="Delete all imported contacts" icon="trash" title="Delete all imported contacts?"
+                         confirmLabel="Delete everything" pendingLabel="Deleting…">
+            <p>This permanently deletes {Number(stats.total).toLocaleString()} imported connections and every match decision you made. It can&apos;t be undone.</p>
+            <p>Connected sources (LinkedIn agent, Google) will add their contacts back on their next sync.</p>
+          </ConfirmButton>
+        </div>
       </section>
     </Shell>
   );

@@ -4,6 +4,7 @@ import { linkedinAgentEnabled, requestCrawl, startLinkedInLogin } from "@/lib/ag
 import { db, WORKSPACE_ID } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { Icon } from "../ui/icons";
+import { ConfirmButton, SubmitButton } from "../ui/forms";
 
 const CONSENTS = [
   ["risk", "I understand LinkedIn's User Agreement prohibits automated access, and LinkedIn may restrict or suspend my account. I accept that risk for my own account."],
@@ -89,10 +90,13 @@ export default async function LinkedInSection() {
           </div>
           <div className="row">
             {integ.status === "connected"
-              ? <form action={syncNow}><button type="submit"><Icon name="refresh" size={16} />Run now</button></form>
+              ? <form action={syncNow}><SubmitButton icon="refresh" pending="Starting…">Run now</SubmitButton></form>
               : <form action={connect}>{CONSENTS.map(([k]) => <input key={k} type="hidden" name={k} value="on" />)}
-                  <button type="submit">Sign in again</button></form>}
-            <form action={disconnect}><button className="danger" type="submit">Disconnect and delete session + work history</button></form>
+                  <SubmitButton pending="Opening…">Sign in again</SubmitButton></form>}
+            <ConfirmButton action={disconnect} label="Disconnect LinkedIn" title="Disconnect LinkedIn?" confirmLabel="Disconnect and delete" pendingLabel="Deleting…">
+              <p>This deletes the saved LinkedIn session and all work history the agent has read. Your imported connections stay.</p>
+              <p>Intro routes that relied on work history will drop out on the next mapping run.</p>
+            </ConfirmButton>
           </div>
         </>
       ) : (
@@ -100,7 +104,7 @@ export default async function LinkedInSection() {
           {CONSENTS.map(([k, text]) => (
             <label key={k} className="check"><input type="checkbox" name={k} required /> <span>{text}</span></label>
           ))}
-          <div><button type="submit"><Icon name="linkedin" size={16} />Open LinkedIn sign-in window</button></div>
+          <div><SubmitButton icon="linkedin" pending="Opening a browser…">Open LinkedIn sign-in window</SubmitButton></div>
         </form>
       )}
     </section>

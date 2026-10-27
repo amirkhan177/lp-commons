@@ -7,6 +7,7 @@ import { requireSession } from "@/lib/session";
 import { getProfile } from "@/lib/thesis/fit-run";
 import { DEFAULT_MODEL, listModels } from "@/lib/thesis/openrouter";
 import { GEOGRAPHIES, LP_TYPES, SECTORS, STAGES } from "@/lib/thesis/taxonomy";
+import { ConfirmButton, SubmitButton } from "../ui/forms";
 
 const usd = (n: number | null) => (n == null ? "" : n >= 1e6 ? `${+(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `${+(n / 1e3).toFixed(1)}K` : String(n));
 
@@ -66,9 +67,11 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 <label className="field"><span>Model</span>
                   <input type="text" name="model" list="or-models" defaultValue={keyRow.scopes || DEFAULT_MODEL} />
                 </label>
-                <button className="secondary" type="submit">Change model</button>
+                <SubmitButton className="secondary" pending="Saving…">Change model</SubmitButton>
               </form>
-              <form action={removeKey}><button className="danger sm" type="submit"><Icon name="trash" size={14} />Remove key</button></form>
+              <ConfirmButton action={removeKey} label="Remove key" className="danger sm" icon="trash" title="Remove your OpenRouter key?" confirmLabel="Remove key" pendingLabel="Removing…">
+                <p>The encrypted key is deleted from this server. Drafts fall back to keyword detection and matches keep rule-based scores until you add a key again.</p>
+              </ConfirmButton>
             </>
           ) : (
             <form action={saveKey} className="stack">
@@ -77,7 +80,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               </label>
               <div className="key-row">
                 <label className="field"><span>Model</span><input type="text" name="model" list="or-models" defaultValue={DEFAULT_MODEL} /></label>
-                <button type="submit"><Icon name="key" size={16} />Save &amp; verify</button>
+                <SubmitButton icon="key" pending="Verifying with OpenRouter…">Save &amp; verify</SubmitButton>
               </div>
             </form>
           )}
@@ -97,7 +100,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             <label className="field"><span>Pitch deck <span className="hint">PDF, optional, up to 15 MB</span></span>
               <input type="file" name="deck" accept="application/pdf,.pdf" />
             </label>
-            <button type="submit"><Icon name="sparkle" size={16} />{keyRow ? "Draft with AI" : "Detect from text"}</button>
+            <SubmitButton icon="sparkle" pending={keyRow ? "Reading your site and drafting… (up to a minute)" : "Reading your site…"}>{keyRow ? "Draft with AI" : "Detect from text"}</SubmitButton>
           </form>
         </section>
       </div>
@@ -137,7 +140,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             </label>
           )}
           <div className="wide row" style={{ borderTop: "1px solid var(--border)", paddingTop: 18 }}>
-            <button type="submit">Confirm profile &amp; score funds</button>
+            <SubmitButton pending="Saving…">Confirm profile &amp; score funds</SubmitButton>
             {p?.confirmed_at && <Link href="/matches">See matches</Link>}
           </div>
         </form>

@@ -16,6 +16,11 @@ async function logout() {
 /** App frame for signed-in pages: sidebar, top bar with fund search, and the page content. */
 export default async function Shell({ children }: { children: React.ReactNode }) {
   const [unread, onboarded] = await Promise.all([unreadCount(), isOnboarded()]);
+  return <ShellFrame unread={unread} onboarded={onboarded}>{children}</ShellFrame>;
+}
+
+/** The frame without data loading, so loading and error screens can show it instantly. */
+export function ShellFrame({ unread = 0, onboarded = true, children }: { unread?: number; onboarded?: boolean; children: React.ReactNode }) {
   return (
     <div className="app">
       <aside className="sidebar" aria-label="Main navigation">

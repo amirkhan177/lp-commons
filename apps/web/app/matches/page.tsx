@@ -8,6 +8,7 @@ import { requireSession } from "@/lib/session";
 import { computeFitAfterResponse, getProfile } from "@/lib/thesis/fit-run";
 import { labelOf, SECTORS } from "@/lib/thesis/taxonomy";
 import AutoRefresh from "../onboarding/auto-refresh";
+import { SubmitButton } from "../ui/forms";
 
 const STRONG = 70;
 
@@ -66,7 +67,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
         sub={profile?.confirmed_at
           ? <>Ranked against <b className="strong">{profile.fund_name}</b> · {profile.sectors.map((s) => labelOf(SECTORS, s)).join(", ")} · <Link href="/profile">Edit profile</Link></>
           : "Confirm your fund profile and LP Commons ranks funds of funds and peer funds by fit."}
-        actions={profile?.confirmed_at ? <form action={recompute}><button className="secondary" type="submit" disabled={running}><Icon name="refresh" size={16} />{running ? "Scoring…" : "Re-score"}</button></form> : undefined}
+        actions={profile?.confirmed_at ? <form action={recompute}><SubmitButton className="secondary" icon="refresh" pending="Starting…" disabled={running}>{running ? "Scoring…" : "Re-score"}</SubmitButton></form> : undefined}
       />
       <Flash ok={ok} />
       {!profile?.confirmed_at ? (

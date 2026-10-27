@@ -4,6 +4,7 @@ import { authConfigured, checkPassword, createSessionToken, SESSION_TTL_SECONDS 
 import { SESSION_COOKIE } from "@/lib/constants";
 import { Icon } from "../ui/icons";
 import { Notice } from "../ui/shell";
+import { SubmitButton } from "../ui/forms";
 
 async function login(formData: FormData) {
   "use server";
@@ -49,7 +50,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                        aria-invalid={error ? true : undefined} aria-describedby={error ? "login-error" : undefined} />
                 {error && <span id="login-error" className="error small">Wrong password. Try again.</span>}
               </label>
-              <button type="submit" style={{ width: "100%" }}>Sign in</button>
+              <SubmitButton className="block" pending="Signing in…">Sign in</SubmitButton>
             </form>
           )}
           <p className="muted xs" style={{ marginTop: 28 }}>Built from public SEC Form D filings. Your network stays in this private instance.</p>

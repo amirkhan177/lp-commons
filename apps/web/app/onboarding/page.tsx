@@ -6,6 +6,7 @@ import { uploadConnections } from "../import/actions";
 import AutoRefresh from "./auto-refresh";
 import { getOnboarding, markOnboarded, type StepState } from "@/lib/onboarding";
 import { requireSession } from "@/lib/session";
+import { SubmitButton } from "../ui/forms";
 
 const CHIP_CLASS: Record<StepState, string> = {
   done: "ok", ready: "", running: "warn", optional: "violet", locked: "neutral", unavailable: "neutral",
@@ -76,7 +77,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
                     <form action={uploadConnections} className="act">
                       <input type="hidden" name="returnTo" value="/onboarding" />
                       <input type="file" name="file" accept=".csv,text/csv" required aria-label="LinkedIn Connections.csv" />
-                      <button className="secondary" type="submit"><Icon name="upload" size={16} />Upload</button>
+                      <SubmitButton className="secondary" icon="upload" pending="Importing…">Upload</SubmitButton>
                     </form>
                   </details>
                 )}
@@ -92,13 +93,13 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
       <div className="row" style={{ marginTop: 20 }}>
         <form action={finish}>
           <input type="hidden" name="to" value={dest} />
-          <button type="submit" disabled={!ob.ready}>
+          <SubmitButton disabled={!ob.ready} pending="Opening…">
             {ob.ready ? (ob.bestFundId ? "Open my best route" : "Go to my map") : "Finish the steps above"}
-          </button>
+          </SubmitButton>
         </form>
         <form action={finish}>
           <input type="hidden" name="to" value="/reach" />
-          <button className="ghost" type="submit">{ob.onboarded ? "Close setup" : "Skip for now"}</button>
+          <SubmitButton className="ghost">{ob.onboarded ? "Close setup" : "Skip for now"}</SubmitButton>
         </form>
       </div>
       <p className="footnote">

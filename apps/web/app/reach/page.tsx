@@ -7,6 +7,7 @@ import { filterSql, hasFilters, parseFilters } from "@/lib/fund-filters";
 import { enqueueMapping } from "@/lib/agent/run";
 import { db, WORKSPACE_ID } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { SubmitButton } from "../ui/forms";
 
 async function runNow() {
   "use server";
@@ -70,7 +71,7 @@ export default async function ReachPage({ searchParams }: {
       <PageHead
         title="Funds you can reach"
         sub={lastDone?.finished_at ? `Warm intro routes from your network, last mapped ${new Date(lastDone.finished_at).toLocaleString()}.` : "Warm intro routes from your network to venture funds and funds of funds."}
-        actions={<form action={runNow}><button className="secondary" type="submit" disabled={busy}><Icon name="refresh" size={16} />{busy ? "Mapping…" : "Re-map now"}</button></form>}
+        actions={<form action={runNow}><SubmitButton className="secondary" icon="refresh" pending="Starting…" disabled={busy}>{busy ? "Mapping…" : "Re-map now"}</SubmitButton></form>}
       />
       {busy && <div style={{ marginBottom: 20 }}><Notice kind="info">Mapping in progress. You&apos;ll get a notification when it&apos;s ready.</Notice></div>}
       {!busy && run?.status === "failed" && <div style={{ marginBottom: 20 }}><Notice kind="error">Last run failed: {run.error}</Notice></div>}

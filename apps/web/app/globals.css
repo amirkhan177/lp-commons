@@ -535,3 +535,26 @@ td .badge { margin: 2px 0; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 @media (min-width: 1101px) { .map-layout > .card:first-child { position: sticky; top: calc(var(--topbar-h) + 20px); max-height: calc(100vh - var(--topbar-h) - 40px); overflow-y: auto; } }
+
+/* ---------- Modal (native <dialog>) ---------- */
+.modal { width: min(440px, calc(100vw - 32px)); padding: 24px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text-2); box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24); }
+.modal::backdrop { background: rgba(15, 15, 16, 0.45); backdrop-filter: blur(2px); }
+.modal[open] { animation: modal-in 0.16s ease-out; }
+.modal-icon { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; color: var(--danger); background: var(--danger-soft); margin-bottom: 14px; }
+.modal h2 { font-size: 18px; }
+.modal-body { margin-top: 8px; color: var(--muted); font-size: 14px; }
+.modal-body p + p { margin-top: 8px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+button.danger-solid { background: #dc2626; border-color: #dc2626; color: #fff; }
+button.danger-solid:hover:not(:disabled) { background: #b91c1c; border-color: #b91c1c; }
+@keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+
+/* ---------- Progress feedback ---------- */
+.spinner { width: 14px; height: 14px; border-radius: 999px; border: 2px solid currentColor; border-right-color: transparent; animation: spin 0.7s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+button[aria-busy="true"] { opacity: 0.85; }
+.skeleton { border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s !important; } }
+button.block, .btn.block { width: 100%; }

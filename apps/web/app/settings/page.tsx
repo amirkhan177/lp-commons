@@ -10,6 +10,7 @@ import { db, WORKSPACE_ID } from "@/lib/db";
 import { googleConfigured, redirectUri, revoke } from "@/lib/google/oauth";
 import { syncGoogle } from "@/lib/google/sync";
 import { requireSession } from "@/lib/session";
+import { ConfirmButton, SubmitButton } from "../ui/forms";
 
 const MESSAGES: Record<string, string> = {
   google_connected: "Google connected. Syncing contacts and calendar in the background — you'll be notified when your map is updated.",
@@ -94,8 +95,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   : "First sync in progress…"}
               </p>
               <div className="row">
-                <form action={syncNow}><button type="submit"><Icon name="refresh" size={16} />Sync now</button></form>
-                <form action={disconnect}><button className="danger" type="submit">Disconnect and delete Google data</button></form>
+                <form action={syncNow}><SubmitButton icon="refresh" pending="Starting…">Sync now</SubmitButton></form>
+                <ConfirmButton action={disconnect} label="Disconnect Google" title="Disconnect Google?" confirmLabel="Disconnect and delete" pendingLabel="Deleting…">
+                  <p>LP Commons revokes its access and deletes every Google contact and meeting it synced. Routes through those people disappear on the next mapping run.</p>
+                </ConfirmButton>
               </div>
             </>
           ) : ready ? (
