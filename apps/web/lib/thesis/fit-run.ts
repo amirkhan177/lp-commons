@@ -69,6 +69,7 @@ async function scoreOnce(): Promise<{ fofs: number; peers: number; reranked: num
     const keep = [...fofs, ...peers];
 
     let notes = new Map<number, { score: number; reason: string }>();
+    let rerankError: string | undefined;
     const llm = await getLlm();
     if (llm) {
       const top = [...keep].sort((a, b) => b.f.score - a.f.score).slice(0, RERANK);
@@ -89,6 +90,7 @@ async function scoreOnce(): Promise<{ fofs: number; peers: number; reranked: num
           .map((a) => [Number(a.id), { score: Number(a.score), reason: String(a.reason ?? "").slice(0, 160) }]));
       } catch (e) {
         console.error("fit re-rank failed; keeping keyword scores", e); // the deterministic scores still stand
+        rerankError = e instanceof Error ? e.message : String(e);
       }
     }
 
@@ -109,7 +111,7 @@ async function scoreOnce(): Promise<{ fofs: number; peers: number; reranked: num
     } finally {
       client.release();
     }
-    const stats = { fofs: fofs.length, peers: peers.length, reranked: notes.size };
+    const stats = { fofs: fofs.length, peers: peers.length, reranked: notes.size, ...(rerankError ? { rerank_error: rerankError.slice(0, 400) } : {}) };
     await pool.query("UPDATE fit_runs SET status = 'done', finished_at = now(), stats = $2 WHERE id = $1", [run.id, JSON.stringify(stats)]);
     return stats;
   } catch (e) {

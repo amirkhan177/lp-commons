@@ -31,7 +31,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
   const kind = k === "peer" ? "peer" : "fof";
   const pool = db();
   const profile = await getProfile();
-  const run = (await pool.query<{ status: string; stats: { fofs: number; peers: number; reranked: number } | null; finished_at: string | null; error: string | null }>(
+  const run = (await pool.query<{ status: string; stats: { fofs: number; peers: number; reranked: number; rerank_error?: string } | null; finished_at: string | null; error: string | null }>(
     `SELECT CASE WHEN status = 'running' AND created_at < now() - interval '15 minutes' THEN 'failed' ELSE status END AS status,
             stats, finished_at::text,
             CASE WHEN status = 'running' THEN 'Interrupted. Re-score to try again.' ELSE error END AS error FROM fit_runs WHERE workspace_id = $1 ORDER BY id DESC LIMIT 1`, [WORKSPACE_ID])).rows[0];
@@ -73,6 +73,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
               {running ? <span className="badge warn">Scoring…</span>
                 : run?.status === "failed" ? <span className="badge warn">Last scoring failed: {run.error}</span>
                 : run?.stats ? <span className="muted small">Scored {run.stats.fofs} funds of funds and {run.stats.peers} peer funds{run.stats.reranked ? `; AI reviewed the top ${run.stats.reranked}` : ""}.</span> : null}
+              {run?.stats?.rerank_error && <span className="badge warn" title={run.stats.rerank_error}>AI review failed: {run.stats.rerank_error}</span>}
               <form action={recompute} style={{ marginLeft: "auto" }}><button className="secondary" type="submit" disabled={running}>Re-score</button></form>
             </div>
             <div className="small" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>

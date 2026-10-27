@@ -67,6 +67,7 @@ export function friendlyError(status: number, detail: string): string {
     return "OpenRouter blocked every provider for this model. Check Allowed/Ignored providers and data policy under openrouter.ai/settings/privacy, or the key's guardrails.";
   }
   if (status === 429) return "OpenRouter rate limit reached. Try again in a minute.";
+  if (status === 0) return detail;
   return `OpenRouter ${status}: ${detail.slice(0, 160)}`;
 }
 
@@ -83,7 +84,7 @@ async function chatOnce(key: string, model: string, system: string, user: string
       body: JSON.stringify({
         model,
         temperature: 0.2,
-        max_tokens: model === FALLBACK_MODEL ? maxTokens + 4000 : maxTokens,
+        max_tokens: model === FALLBACK_MODEL ? maxTokens * 4 + 8000 : maxTokens,
         messages: [{ role: "system", content: system }, { role: "user", content: user }],
         ...reasoning,
       }),
@@ -99,8 +100,12 @@ async function chatOnce(key: string, model: string, system: string, user: string
     return { ok: false as const, status: res.status, detail };
   }
   const body = await res.json();
-  const content = body?.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) return { ok: false as const, status: 0, detail: "The model returned an empty answer." };
+  const choice = body?.choices?.[0];
+  const content = choice?.message?.content;
+  if (typeof content !== "string" || !content.trim()) {
+    const why = choice?.finish_reason === "length" ? " (it ran out of tokens, likely while reasoning)" : choice?.finish_reason ? ` (finish: ${choice.finish_reason})` : "";
+    return { ok: false as const, status: 0, detail: `${model} returned an empty answer${why}.` };
+  }
   return { ok: true as const, text: content };
 }
 
