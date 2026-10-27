@@ -8,6 +8,7 @@ import { labelOf, SECTORS, STAGES, type FundProfileDraft } from "./taxonomy";
 
 const KEEP_PEERS = 300;
 const RERANK = 50;
+const RERANK_BATCH = 10;
 
 export async function getProfile(): Promise<(FundProfileDraft & { website: string | null; own_entity_id: number | null; confirmed_at: string | null; draft_source: string | null }) | null> {
   const { rows } = await db().query(
@@ -68,29 +69,40 @@ async function scoreOnce(): Promise<{ fofs: number; peers: number; reranked: num
       .sort((a, b) => b.f.score - a.f.score).slice(0, KEEP_PEERS);
     const keep = [...fofs, ...peers];
 
-    let notes = new Map<number, { score: number; reason: string }>();
+    const notes = new Map<number, { score: number; reason: string }>();
     let rerankError: string | undefined;
     const llm = await getLlm();
     if (llm) {
       const top = [...keep].sort((a, b) => b.f.score - a.f.score).slice(0, RERANK);
-      const brief = {
-        manager: {
-          fund: profile.fund_name, fund_number: profile.fund_number, target_size_usd: profile.target_size,
-          thesis: profile.summary, sectors: profile.sectors.map((s) => labelOf(SECTORS, s)),
-          stages: profile.stages.map((s) => labelOf(STAGES, s)), geographies: profile.geographies, keywords: profile.keywords,
-        },
-        funds: top.map(({ c, f }) => ({ id: c.id, kind: f.kind, name: c.name, managed_by: c.managers.slice(0, 2),
-                                        location: c.state, vintage: c.vintage, raised_usd: c.raised, status: c.raise_status })),
+      const manager = {
+        fund: profile.fund_name, fund_number: profile.fund_number, target_size_usd: profile.target_size,
+        thesis: profile.summary, sectors: profile.sectors.map((s) => labelOf(SECTORS, s)),
+        stages: profile.stages.map((s) => labelOf(STAGES, s)), geographies: profile.geographies, keywords: profile.keywords,
       };
-      try {
-        const answer = parseJson<{ id: number; score: number; reason: string }[]>(
-          (await chat(llm.key, llm.model, RERANK_SYSTEM, JSON.stringify(brief), 3000)).text);
-        const allowed = new Set(top.map((t) => t.c.id));
-        notes = new Map(answer.filter((a) => allowed.has(Number(a.id)) && Number.isFinite(Number(a.score)))
-          .map((a) => [Number(a.id), { score: Number(a.score), reason: String(a.reason ?? "").slice(0, 160) }]));
-      } catch (e) {
-        console.error("fit re-rank failed; keeping keyword scores", e); // the deterministic scores still stand
-        rerankError = e instanceof Error ? e.message : String(e);
+      // Small batches keep each call quick, even on a slow free model. The first batch tells us which
+      // model actually answers (the GP's or the fallback); the rest go to that model in parallel.
+      const review = async (batch: typeof top, model: string) => {
+        const brief = { manager, funds: batch.map(({ c, f }) => ({ id: c.id, kind: f.kind, name: c.name, managed_by: c.managers.slice(0, 2),
+                                                                  location: c.state, vintage: c.vintage, raised_usd: c.raised, status: c.raise_status })) };
+        const answer = await chat(llm.key, model, RERANK_SYSTEM, JSON.stringify(brief), 1200);
+        const allowed = new Set(batch.map((t) => t.c.id));
+        for (const a of parseJson<{ id: number; score: number; reason: string }[]>(answer.text)) {
+          if (allowed.has(Number(a.id)) && Number.isFinite(Number(a.score))) {
+            notes.set(Number(a.id), { score: Number(a.score), reason: String(a.reason ?? "").slice(0, 160) });
+          }
+        }
+        return answer.model;
+      };
+      const batches = Array.from({ length: Math.ceil(top.length / RERANK_BATCH) }, (_, i) => top.slice(i * RERANK_BATCH, (i + 1) * RERANK_BATCH));
+      const fail = (e: unknown) => {
+        console.error("fit re-rank batch failed; keeping keyword scores", e); // the deterministic scores still stand
+        rerankError ??= e instanceof Error ? e.message : String(e);
+      };
+      let model = llm.model;
+      try { model = await review(batches[0], model); } catch (e) { fail(e); }
+      if (notes.size) {
+        const rest = await Promise.allSettled(batches.slice(1).map((b) => review(b, model)));
+        rest.forEach((r) => r.status === "rejected" && fail(r.reason));
       }
     }
 

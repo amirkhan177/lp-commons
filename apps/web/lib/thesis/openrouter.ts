@@ -84,7 +84,7 @@ async function chatOnce(key: string, model: string, system: string, user: string
       body: JSON.stringify({
         model,
         temperature: 0.2,
-        max_tokens: model === FALLBACK_MODEL ? maxTokens * 4 + 8000 : maxTokens,
+        max_tokens: model === FALLBACK_MODEL ? maxTokens * 3 + 6000 : maxTokens,
         messages: [{ role: "system", content: system }, { role: "user", content: user }],
         ...reasoning,
       }),
@@ -99,7 +99,13 @@ async function chatOnce(key: string, model: string, system: string, user: string
     const detail = errorDetail(await res.text().catch(() => ""));
     return { ok: false as const, status: res.status, detail };
   }
-  const body = await res.json();
+  let body;
+  try {
+    body = await res.json(); // the timeout also covers reading the body
+  } catch (e) {
+    const timedOut = e instanceof Error && e.name === "TimeoutError";
+    return { ok: false as const, status: 0, detail: timedOut ? `${model} didn't answer within ${CHAT_TIMEOUT_MS / 1000}s.` : `${model} sent an unreadable answer.` };
+  }
   const choice = body?.choices?.[0];
   const content = choice?.message?.content;
   if (typeof content !== "string" || !content.trim()) {
