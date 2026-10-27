@@ -70,21 +70,30 @@ export function friendlyError(status: number, detail: string): string {
   return `OpenRouter ${status}: ${detail.slice(0, 160)}`;
 }
 
+const CHAT_TIMEOUT_MS = 120_000;
+
 async function chatOnce(key: string, model: string, system: string, user: string, maxTokens: number) {
   // The fallback is a reasoning model: keep its thinking short and out of the answer, and leave room for it.
   const reasoning = model === FALLBACK_MODEL ? { reasoning: { effort: "low", exclude: true } } : {};
-  const res = await fetch(`${BASE}/chat/completions`, {
-    method: "POST",
-    headers: headers(key),
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      max_tokens: model === FALLBACK_MODEL ? maxTokens + 4000 : maxTokens,
-      messages: [{ role: "system", content: system }, { role: "user", content: user }],
-      ...reasoning,
-    }),
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}/chat/completions`, {
+      method: "POST",
+      headers: headers(key),
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        max_tokens: model === FALLBACK_MODEL ? maxTokens + 4000 : maxTokens,
+        messages: [{ role: "system", content: system }, { role: "user", content: user }],
+        ...reasoning,
+      }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(CHAT_TIMEOUT_MS),
+    });
+  } catch (e) {
+    const timedOut = e instanceof Error && e.name === "TimeoutError";
+    return { ok: false as const, status: 0, detail: timedOut ? `${model} didn't answer within ${CHAT_TIMEOUT_MS / 1000}s.` : "Couldn't reach OpenRouter." };
+  }
   if (!res.ok) {
     const detail = errorDetail(await res.text().catch(() => ""));
     return { ok: false as const, status: res.status, detail };

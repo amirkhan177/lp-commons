@@ -32,7 +32,9 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
   const pool = db();
   const profile = await getProfile();
   const run = (await pool.query<{ status: string; stats: { fofs: number; peers: number; reranked: number } | null; finished_at: string | null; error: string | null }>(
-    "SELECT status, stats, finished_at::text, error FROM fit_runs WHERE workspace_id = $1 ORDER BY id DESC LIMIT 1", [WORKSPACE_ID])).rows[0];
+    `SELECT CASE WHEN status = 'running' AND created_at < now() - interval '15 minutes' THEN 'failed' ELSE status END AS status,
+            stats, finished_at::text,
+            CASE WHEN status = 'running' THEN 'Interrupted. Re-score to try again.' ELSE error END AS error FROM fit_runs WHERE workspace_id = $1 ORDER BY id DESC LIMIT 1`, [WORKSPACE_ID])).rows[0];
   const counts = (await pool.query<{ kind: string; strong: string; total: string }>(
     `SELECT kind, count(*) FILTER (WHERE score >= $2) AS strong, count(*) AS total FROM fund_fit WHERE workspace_id = $1 GROUP BY kind`,
     [WORKSPACE_ID, STRONG])).rows;

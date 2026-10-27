@@ -38,7 +38,24 @@ Judge only from the given names and facts; do not assume facts you can't see.
 Answer with ONE JSON array only: [{"id": <number>, "score": <0-100>, "reason": "<= 110 characters"}]`;
 
 /** Score every candidate, keep FoFs + top peers; with a key, re-rank the top 50 with the user's LLM. */
+const FIT_LOCK = 72_610_002; // pg advisory lock: one scoring run at a time, so the newest profile always wins
+
 export async function computeFit(): Promise<{ fofs: number; peers: number; reranked: number }> {
+  const lock = await db().connect();
+  try {
+    await lock.query("SELECT pg_advisory_lock($1)", [FIT_LOCK]);
+    // Holding the lock, any row still 'running' belongs to a process that died (restart, deploy).
+    await lock.query(
+      "UPDATE fit_runs SET status = 'failed', finished_at = now(), error = 'Interrupted. Re-score to try again.' WHERE workspace_id = $1 AND status = 'running'",
+      [WORKSPACE_ID]);
+    return await scoreOnce();
+  } finally {
+    await lock.query("SELECT pg_advisory_unlock($1)", [FIT_LOCK]).catch(() => {});
+    lock.release();
+  }
+}
+
+async function scoreOnce(): Promise<{ fofs: number; peers: number; reranked: number }> {
   const pool = db();
   const profile = await getProfile();
   if (!profile?.confirmed_at) throw new Error("Confirm your fund profile first.");
