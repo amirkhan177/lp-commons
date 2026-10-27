@@ -1,7 +1,8 @@
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import Nav from "../nav";
+import Shell, { Flash, Notice, PageHead } from "../ui/shell";
+import { Icon } from "../ui/icons";
 import LinkedInSection from "./linkedin-section";
 import { enqueueMapping } from "@/lib/agent/run";
 import { decrypt, encryptionConfigured } from "@/lib/crypto";
@@ -64,47 +65,51 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const ready = googleConfigured() && encryptionConfigured();
 
   return (
-    <div className="shell">
-      <Nav />
-      <div className="hud-kicker">LP Commons // Settings</div>
-      <h1>Settings</h1>
-      {ok && <p className="badge ok">{MESSAGES[ok] ?? ok}</p>}
-      {error && <p className="error">{MESSAGES[error] ?? error}</p>}
+    <Shell>
+      <PageHead title="Settings" sub="Connect the sources LP Commons maps your network from. Every connection is private to this instance and can be removed in one click." />
+      <Flash ok={ok ? MESSAGES[ok] ?? ok : undefined} error={error ? MESSAGES[error] ?? error : undefined} />
 
-      <div className="stack">
-      <LinkedInSection />
-      <section className="card stack">
-        <h2 style={{ margin: 0 }}>Google contacts & calendar</h2>
-        <p className="muted" style={{ margin: 0 }}>
-          Read-only access to your contacts, people you&apos;ve emailed, and who you&apos;ve met in the last two years.
-          People you&apos;ve actually met count as stronger intro paths. Data stays in this private instance; the
-          refresh token is encrypted at rest. Event titles and contents are never fetched.
-        </p>
-        {integ ? (
-          <>
-            <p style={{ margin: 0 }}>
-              <span className="badge ok">connected</span>{" "}
-              {integ.last_synced_at
-                ? `Last synced ${new Date(integ.last_synced_at).toLocaleString()} · ${integ.last_sync_stats?.contacts ?? 0} contacts, ${integ.last_sync_stats?.met ?? 0} you've met`
-                : "First sync in progress…"}
-            </p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <form action={syncNow}><button type="submit">Sync now</button></form>
-              <form action={disconnect}><button className="secondary" type="submit">Disconnect and delete Google data</button></form>
+      <div className="stack-lg">
+        <LinkedInSection />
+        <section className="card stack">
+          <div className="card-head" style={{ margin: 0 }}>
+            <div className="row">
+              <span className="stat-icon blue" style={{ margin: 0 }}><Icon name="google" /></span>
+              <div>
+                <h2>Google contacts &amp; calendar</h2>
+                <p className="muted small" style={{ marginTop: 2 }}>Read-only. People you&apos;ve actually met count as stronger intro paths.</p>
+              </div>
             </div>
-          </>
-        ) : ready ? (
-          <div><a className="btn" href="/api/google/start">Connect Google</a></div>
-        ) : (
-          <div className="notice">
-            Not configured. Create an OAuth client (type <em>Web application</em>) in Google Cloud Console, enable the
-            People API and Google Calendar API, add the redirect URI <code>{process.env.APP_URL ? redirectUri() : "<APP_URL>/api/google/callback"}</code>,
-            then set <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>, <code>APP_URL</code> and{" "}
-            <code>ENCRYPTION_KEY</code> (64 hex chars) on the server.
+            {integ ? <span className="badge ok"><Icon name="check" size={14} />Connected</span> : <span className="badge neutral">Not connected</span>}
           </div>
-        )}
-      </section>
+          <p className="muted small">
+            Reads your contacts, people you&apos;ve emailed, and who you&apos;ve met in the last two years. Data stays in
+            this private instance; the refresh token is encrypted at rest. Event titles and contents are never fetched.
+          </p>
+          {integ ? (
+            <>
+              <p className="small">
+                {integ.last_synced_at
+                  ? <>Last synced {new Date(integ.last_synced_at).toLocaleString()} · <b className="strong">{integ.last_sync_stats?.contacts ?? 0}</b> contacts, <b className="strong">{integ.last_sync_stats?.met ?? 0}</b> you&apos;ve met</>
+                  : "First sync in progress…"}
+              </p>
+              <div className="row">
+                <form action={syncNow}><button type="submit"><Icon name="refresh" size={16} />Sync now</button></form>
+                <form action={disconnect}><button className="danger" type="submit">Disconnect and delete Google data</button></form>
+              </div>
+            </>
+          ) : ready ? (
+            <div><a className="btn" href="/api/google/start"><Icon name="google" size={16} />Connect Google</a></div>
+          ) : (
+            <Notice>
+              Not configured. Create an OAuth client (type <em>Web application</em>) in Google Cloud Console, enable the
+              People API and Google Calendar API, add the redirect URI <code>{process.env.APP_URL ? redirectUri() : "<APP_URL>/api/google/callback"}</code>,
+              then set <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>, <code>APP_URL</code> and{" "}
+              <code>ENCRYPTION_KEY</code> (64 hex chars) on the server.
+            </Notice>
+          )}
+        </section>
       </div>
-    </div>
+    </Shell>
   );
 }

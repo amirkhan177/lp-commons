@@ -30,7 +30,7 @@ export default function FundFilterBar({ action, filters, keep = {}, extra }: {
       {extra}
       <div className="filter-actions">
         <button type="submit">Apply</button>
-        <Link href={`${action}${keep.q ? `?q=${encodeURIComponent(keep.q)}` : ""}`} className="small">Clear</Link>
+        <Link href={`${action}${keep.q ? `?q=${encodeURIComponent(keep.q)}` : ""}`} className="btn ghost">Clear</Link>
       </div>
       {hint && <p className="filter-hint">{hint}</p>}
     </form>

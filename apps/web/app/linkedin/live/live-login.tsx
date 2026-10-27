@@ -45,9 +45,9 @@ export default function LiveLogin({ wsUrl }: { wsUrl: string }) {
 
   if (status === "done") {
     return (
-      <div className="card stack">
-        <p style={{ margin: 0 }}><span className="badge ok">LinkedIn connected</span></p>
-        <p style={{ margin: 0 }}>
+      <div className="stack" style={{ padding: 8 }}>
+        <p><span className="badge ok lg">LinkedIn connected</span></p>
+        <p>
           The agent will now read your connections and their work history in the background, slowly and within a
           daily limit. Your map updates as it goes and you&apos;ll get a notification on <Link href="/reach">Reach</Link>.
         </p>
@@ -65,7 +65,7 @@ export default function LiveLogin({ wsUrl }: { wsUrl: string }) {
         tabIndex={0}
         aria-label="Remote LinkedIn login window"
         style={{ width: "100%", maxWidth: 1280, aspectRatio: "1280 / 800", border: "1px solid var(--border)",
-                 borderRadius: 8, background: "#fff", outline: "none", display: status === "error" ? "none" : "block" }}
+                 borderRadius: 12, background: "#fff", outline: "none", display: status === "error" ? "none" : "block" }}
         onClick={(e) => { e.currentTarget.focus(); send({ t: "click", ...toPage(e) }); }}
         onWheel={(e) => send({ t: "wheel", dy: e.deltaY })}
         onKeyDown={(e) => {

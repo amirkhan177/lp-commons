@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import Nav from "../../nav";
+import Shell, { Empty } from "../../ui/shell";
+import { Icon } from "../../ui/icons";
 import { getOrg, linkedinSearchUrl, type Member, type OrgFund } from "@/lib/org";
 import { requireSession } from "@/lib/session";
 import { db, WORKSPACE_ID } from "@/lib/db";
@@ -32,53 +33,43 @@ function FundNode({ f, self = false }: { f: OrgFund; self?: boolean }) {
       {self ? <b>{f.name}</b> : <Link href={`/org/${f.id}`}>{f.name}</Link>}
       <div className="sub">
         {money(f.total_amount_sold)} of {money(f.total_offering_amount)}
-        {f.is_active ? <span className="badge ok">raising</span> : null}
+        {f.is_active ? <> · <span className="badge ok">Raising</span></> : null}
       </div>
     </div>
   );
 }
 
-function PersonnelFile({ m, org }: { m: Member; org: string }) {
+function PersonCard({ m, org }: { m: Member; org: string }) {
   const c = m.contact;
   const roles = m.relationships ?? [];
   const position = (m.titles ?? [])[0];
   return (
-    <article className={`file${c ? " linked" : ""}`} aria-label={`${m.name}, ${roles.join(", ") || "related person"}`}>
-      <span className="file-no">File {String(m.id).padStart(6, "0")}</span>
-      <div className="portrait" aria-hidden>
-        {c?.photo_url ? (
-          <>
-            <img src={c.photo_url} alt="" loading="lazy" referrerPolicy="no-referrer" />
-            <span className="tint" />
-          </>
-        ) : (
-          <>
-            <span className="mono">{initials(m.name)}</span>
-            <span className="cap">No image on file</span>
-          </>
-        )}
-        <span className="lines" />
-        <span className="ret" />
-        <span className="sweep" />
-      </div>
-      <div>
-        <div className="who">{m.name}</div>
-        {position && <div className="pos">{position}</div>}
-        <dl className="fields">
-          <dt>Role</dt><dd>{roles.join(" · ") || "Related person"}</dd>
-          <dt>Funds</dt><dd>{m.funds} {m.funds === 1 ? "fund" : "funds"} here</dd>
-          {m.state && <><dt>Region</dt><dd>{region(m.state)}</dd></>}
-          {c && (c.headline || c.company) && <><dt>Now</dt><dd>{c.headline ?? [c.position, c.company].filter(Boolean).join(" at ")}</dd></>}
-          <dt>Network</dt>
-          <dd className={c ? "ok" : undefined}>
-            {c ? (c.match_status === "possible" ? "Possible match — confirm in Your network" : "Your connection") : "Not connected"}
-          </dd>
-        </dl>
-        <div className="acts">
-          {c?.linkedin_url
-            ? <a href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn profile ↗</a>
-            : <a href={linkedinSearchUrl(m.name, org)} target="_blank" rel="noreferrer">Find on LinkedIn ↗</a>}
+    <article className={`pcard${c ? " linked" : ""}`} aria-label={`${m.name}, ${roles.join(", ") || "related person"}`}>
+      <div className="person">
+        <span className={`avatar lg${c ? " ok" : ""}`}>
+          {c?.photo_url ? <img src={c.photo_url} alt="" loading="lazy" referrerPolicy="no-referrer" /> : initials(m.name)}
+        </span>
+        <div>
+          <div className="who">{m.name}</div>
+          <div className="pos">{position ?? (roles.join(" · ") || "Related person")}</div>
         </div>
+      </div>
+      <div className="badges">
+        {c
+          ? <span className={`badge ${c.match_status === "possible" ? "warn" : "ok"}`}>{c.match_status === "possible" ? "Possible connection" : "Your connection"}</span>
+          : <span className="badge neutral">Not connected</span>}
+        {roles.map((r) => <span key={r} className="badge">{r}</span>)}
+      </div>
+      <dl>
+        <dt>Funds</dt><dd>{m.funds} {m.funds === 1 ? "fund" : "funds"} here</dd>
+        {m.state && <><dt>Region</dt><dd>{region(m.state)}</dd></>}
+        {c && (c.headline || c.company) && <><dt>Now</dt><dd>{c.headline ?? [c.position, c.company].filter(Boolean).join(" at ")}</dd></>}
+      </dl>
+      <div className="acts">
+        {c?.linkedin_url
+          ? <a href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn profile <Icon name="external" size={13} /></a>
+          : <a href={linkedinSearchUrl(m.name, org)} target="_blank" rel="noreferrer">Find on LinkedIn <Icon name="external" size={13} /></a>}
+        {c?.match_status === "possible" && <Link href="/import">Confirm match</Link>}
       </div>
     </article>
   );
@@ -90,7 +81,7 @@ const TIERS: { title: string; test: (m: Member) => boolean }[] = [
   { title: "Other principals", test: () => true },
 ];
 
-function Personnel({ members, org }: { members: Member[]; org: string }) {
+function People({ members, org }: { members: Member[]; org: string }) {
   const placed = new Set<number>();
   return (
     <>
@@ -99,8 +90,8 @@ function Personnel({ members, org }: { members: Member[]; org: string }) {
         group.forEach((m) => placed.add(m.id));
         return group.length ? (
           <div key={t.title} className="tier">
-            <div className="tier-head">{t.title} · {group.length}</div>
-            <div className="files">{group.map((m) => <PersonnelFile key={m.id} m={m} org={org} />)}</div>
+            <div className="tier-head">{t.title} <span className="badge neutral">{group.length}</span></div>
+            <div className="people">{group.map((m) => <PersonCard key={m.id} m={m} org={org} />)}</div>
           </div>
         ) : null;
       })}
@@ -123,58 +114,69 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
   const inNetwork = org.members.filter((m) => m.contact).length;
   const fit = (await db().query<{ score: number; reasons: string[]; llm_note: string | null; kind: string }>(
     "SELECT score, reasons, llm_note, kind FROM fund_fit WHERE workspace_id = $1 AND entity_id = $2", [WORKSPACE_ID, org.id])).rows[0];
+  const kindLabel = org.kind === "manager" ? "Management company" : org.fund?.type === "fof" ? "Fund of funds" : "Fund";
 
   return (
-    <div className="shell">
-      <Nav />
-      <div className="org-head">
-        <div>
-          <div className="hud-kicker">LP Commons // {org.kind === "manager" ? "Management company" : org.fund?.type === "fof" ? "Fund of funds" : "Fund"}</div>
-          <h1 style={{ marginBottom: 0 }}>{org.name}</h1>
-          <div className="org-meta">
-            {(org.city || org.state) && <span>{place(org.city, org.state)}</span>}
-            {org.cik && <span>CIK <b>{org.cik}</b></span>}
-            {org.entity_form && <span>{org.entity_form}{org.jurisdiction ? ` · ${org.jurisdiction}` : ""}</span>}
-            {org.kind === "manager" && <span><b>{org.funds.length}</b> funds · <b>{money(String(raisedTotal))}</b> raised</span>}
-            <span><b>{org.members.length}</b> people{inNetwork ? <> · <b style={{ color: "var(--hud-green)" }}>{inNetwork}</b> in your network</> : null}</span>
-            {org.aliases.length > 0 && <span>Formerly {org.aliases.join(", ")}</span>}
-          </div>
-        </div>
-        <div className="org-route">
-          {fit && (
-            <div style={{ marginBottom: 12 }}>
-              <div className="hud-kicker">Thesis fit</div>
-              <div className="big" style={{ fontSize: 22 }}>{fit.score}<span className="muted small"> / 100</span></div>
-              <div className="muted small" style={{ maxWidth: 320, marginLeft: "auto" }}>{fit.llm_note ?? fit.reasons.join(" · ")}</div>
+    <Shell>
+      <nav className="crumbs" aria-label="Breadcrumb"><Link href="/reach">Reach</Link> / <span>{kindLabel}</span></nav>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="org-hero">
+          <div style={{ minWidth: 0, flex: "1 1 360px" }}>
+            <div className="org-id">
+              <span className="org-mark">{initials(org.name.replace(/[^A-Za-z ]/g, "")) || "#"}</span>
+              <div style={{ minWidth: 0 }}>
+                <span className="badge violet">{kindLabel}</span>
+                <h1 style={{ marginTop: 6 }}>{org.name}</h1>
+              </div>
             </div>
-          )}
-          <div className="hud-kicker">Your best route</div>
-          {best != null && bestFund ? (
-            <>
-              <div className="big">{pct(best)}</div>
-              <Link className="hud-btn" href={`/map?target=${bestFund.id}`}>Open route</Link>
-            </>
-          ) : (
-            <div className="muted small" style={{ marginTop: 6 }}>No route from your network yet</div>
-          )}
+            <div className="org-meta" style={{ marginTop: 12 }}>
+              {(org.city || org.state) && <span>{place(org.city, org.state)}</span>}
+              {org.cik && <span>CIK <b>{org.cik}</b></span>}
+              {org.entity_form && <span>{org.entity_form}{org.jurisdiction ? ` · ${org.jurisdiction}` : ""}</span>}
+              {org.aliases.length > 0 && <span>Formerly {org.aliases.join(", ")}</span>}
+            </div>
+            {org.kind === "fund" && org.fund && (
+              <div className="kv" style={{ marginTop: 20 }}>
+                <div><small>Vintage</small><b>{org.fund.vintage ?? "—"}</b></div>
+                <div><small>Raised</small><b>{money(org.fund.total_amount_sold)}</b></div>
+                <div><small>Raise goal</small><b>{money(org.fund.total_offering_amount)}</b></div>
+                <div><small>Investors</small><b>{org.fund.num_investors ?? "—"}</b></div>
+                <div><small>Status</small><b style={{ color: org.fund.is_active ? "var(--ok)" : "var(--muted)" }}>{org.fund.is_active ? "Raising" : "Quiet"}</b></div>
+              </div>
+            )}
+            {org.kind === "manager" && (
+              <div className="kv" style={{ marginTop: 20 }}>
+                <div><small>Funds</small><b>{org.funds.length}</b></div>
+                <div><small>Raised across funds</small><b>{money(String(raisedTotal))}</b></div>
+                <div><small>People</small><b>{org.members.length}</b></div>
+                <div><small>In your network</small><b style={{ color: inNetwork ? "var(--ok)" : undefined }}>{inNetwork}</b></div>
+              </div>
+            )}
+          </div>
+          <div className="org-side">
+            <div className="metric">
+              <small>Your best route</small>
+              {best != null && bestFund ? (
+                <>
+                  <div className="big">{pct(best)}</div>
+                  <Link className="btn" href={`/map?target=${bestFund.id}`} style={{ marginTop: 8, width: "100%" }}>Open route <Icon name="arrow" size={16} /></Link>
+                </>
+              ) : <div className="note">No route from your network yet</div>}
+            </div>
+            {fit && (
+              <div className="metric">
+                <small>Thesis fit</small>
+                <div className="big">{fit.score}<span className="muted" style={{ fontSize: 14, fontWeight: 600 }}> / 100</span></div>
+                <div className="note">{fit.llm_note ?? fit.reasons.join(" · ")}</div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {org.kind === "fund" && org.fund && (
-        <div className="hud-panel org-section">
-          <div className="dossier-grid">
-            <div className="dossier-cell"><small>Vintage</small><b>{org.fund.vintage ?? "—"}</b></div>
-            <div className="dossier-cell"><small>Raised</small><b>{money(org.fund.total_amount_sold)}</b></div>
-            <div className="dossier-cell"><small>Raise goal</small><b>{money(org.fund.total_offering_amount)}</b></div>
-            <div className="dossier-cell"><small>Investors</small><b>{org.fund.num_investors ?? "—"}</b></div>
-            <div className="dossier-cell"><small>Status</small><b style={{ color: org.fund.is_active ? "var(--hud-green)" : "var(--hud-muted)" }}>{org.fund.is_active ? "Raising" : "Quiet"}</b></div>
-          </div>
-        </div>
-      )}
-
-      <section className="org-section">
-        <h2 className="hud-title">Structure</h2>
-        <div className="hud-panel chart" style={{ marginTop: 10 }}>
+      <section className="card">
+        <div className="card-head"><div><h2>Structure</h2><p>Management company, this fund and its sister funds, from Form D filings.</p></div></div>
+        <div className="chart">
           {org.kind === "manager" ? (
             <>
               <div className="chart-row">
@@ -199,33 +201,31 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
               {org.fund && <div className="chart-row"><FundNode f={org.fund} self /></div>}
               {org.funds.length > 0 && (
                 <>
-                  <div className="hud-kicker" style={{ textAlign: "center", marginTop: 26 }}>Sister funds</div>
-                  <div className="chart-row" style={{ marginTop: 10 }}>{org.funds.slice(0, 12).map((f) => <FundNode key={f.id} f={f} />)}</div>
+                  <div className="chart-label">Sister funds</div>
+                  <div className="chart-row" style={{ marginTop: 12 }}>{org.funds.slice(0, 12).map((f) => <FundNode key={f.id} f={f} />)}</div>
                 </>
               )}
-              {org.managers.length === 0 && <p className="muted small" style={{ textAlign: "center" }}>No management company named on this fund&apos;s filings.</p>}
+              {org.managers.length === 0 && <p className="muted small" style={{ textAlign: "center", marginTop: 12 }}>No management company named on this fund&apos;s filings.</p>}
             </>
           )}
         </div>
       </section>
 
-      <section className="org-section">
-        <h2 className="hud-title">Personnel · {org.members.length}</h2>
-        <p className="muted small">
-          From related persons named on Form D filings. LinkedIn details appear only for people who are your own
-          connections; for anyone else, use LinkedIn&apos;s own search.
-        </p>
-        {org.members.length ? (
-          <Personnel members={org.members} org={org.name} />
-        ) : (
-          <p className="muted">No individuals named on these filings.</p>
-        )}
+      <section className="card section">
+        <div className="card-head">
+          <div>
+            <h2>People <span className="badge neutral">{org.members.length}</span></h2>
+            <p>Related persons named on Form D filings. LinkedIn details appear only for your own connections; for anyone else, use LinkedIn&apos;s search.</p>
+          </div>
+          {inNetwork > 0 && <span className="badge ok">{inNetwork} in your network</span>}
+        </div>
+        {org.members.length ? <People members={org.members} org={org.name} /> : <Empty icon="users" title="No people on these filings" />}
       </section>
 
       {org.kind === "fund" && org.filings.length > 0 && (
-        <section className="org-section">
-          <h2 className="hud-title">Filing history</h2>
-          <ul className="timeline" style={{ marginTop: 12 }}>
+        <section className="card section">
+          <div className="card-head"><div><h2>Filing history</h2><p>Every Form D notice and amendment, newest first.</p></div></div>
+          <ul className="timeline">
             {org.filings.map((f, i) => (
               <li key={f.accession_number} className={i === 0 ? "first" : ""}>
                 <div className="when">{f.filed_at ?? "—"} · {f.submission_type === "D/A" ? "Amendment" : "Notice"}</div>
@@ -239,9 +239,7 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
         </section>
       )}
 
-      <p className="muted small" style={{ marginTop: 26 }}>
-        Based on public SEC Form D filings; self-reported and may be incomplete or out of date. Not investment advice.
-      </p>
-    </div>
+      <p className="footnote">Based on public SEC Form D filings; self-reported and may be incomplete or out of date. Not investment advice.</p>
+    </Shell>
   );
 }

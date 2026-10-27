@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import Nav from "../nav";
+import Shell, { Empty, Notice, PageHead } from "../ui/shell";
+import { Icon } from "../ui/icons";
 import FundFilterBar, { RaiseBadge } from "../fund-filter-bar";
 import { filterSql, hasFilters, parseFilters } from "@/lib/fund-filters";
 import { enqueueMapping } from "@/lib/agent/run";
@@ -63,70 +64,82 @@ export default async function ReachPage({ searchParams }: {
     params)).rows;
   const busy = run && (run.status === "queued" || run.status === "running");
 
+  const st = lastDone?.stats;
   return (
-    <div className="shell">
-      <Nav />
-      <div className="hud-kicker">LP Commons // Reach</div>
-      <h1>Funds you can reach</h1>
-      <div className="card stack">
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          {busy ? (
-            <span className="badge warn">Mapping in progress — you&apos;ll get a notification when it&apos;s ready</span>
-          ) : run?.status === "failed" ? (
-            <span className="badge warn">Last run failed: {run.error}</span>
-          ) : null}
-          {lastDone?.stats && (
-            <span className="muted small">
-              Mapped {new Date(lastDone.finished_at!).toLocaleString()}: {lastDone.stats.funds_reachable} of{" "}
-              {lastDone.stats.active_funds} active funds reachable through {lastDone.stats.contacts_used} of your contacts,{" "}
-              {lastDone.stats.strong_paths} strong.
-            </span>
-          )}
-          <form action={runNow} style={{ marginLeft: "auto" }}><button className="secondary" type="submit" disabled={busy}>Re-map now</button></form>
-        </div>
-        <FundFilterBar action="/reach" filters={filters} extra={
-          <>
-            <label>
-              <span>Type</span>
-              <select name="type" defaultValue={type === "fof" ? "fof" : ""}>
-                <option value="">All funds</option>
-                <option value="fof">Funds of funds</option>
-              </select>
-            </label>
-            <label className="check"><input type="checkbox" name="strong" value="1" defaultChecked={Boolean(strong)} /> Strong paths only</label>
-          </>
-        } />
-      </div>
+    <Shell>
+      <PageHead
+        title="Funds you can reach"
+        sub={lastDone?.finished_at ? `Warm intro routes from your network, last mapped ${new Date(lastDone.finished_at).toLocaleString()}.` : "Warm intro routes from your network to venture funds and funds of funds."}
+        actions={<form action={runNow}><button className="secondary" type="submit" disabled={busy}><Icon name="refresh" size={16} />{busy ? "Mapping…" : "Re-map now"}</button></form>}
+      />
+      {busy && <div style={{ marginBottom: 20 }}><Notice kind="info">Mapping in progress. You&apos;ll get a notification when it&apos;s ready.</Notice></div>}
+      {!busy && run?.status === "failed" && <div style={{ marginBottom: 20 }}><Notice kind="error">Last run failed: {run.error}</Notice></div>}
 
-      {rows.length === 0 ? (
-        <p className="muted">
-          {hasFilters(filters) || type || strong
-            ? <>No reachable funds match these filters. <Link href="/reach">Clear filters</Link></>
-            : <>Nothing mapped yet. <Link href="/import">Import your LinkedIn connections</Link> or{" "}
-                <Link href="/settings">connect Google</Link>; mapping starts automatically.</>}
-        </p>
-      ) : (
-        <table style={{ marginTop: 16 }}>
-          <thead><tr><th>Fund</th><th>Best path</th><th>Strength</th><th>Your people</th></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.entity_id}>
-                <td>
-                  <Link href={`/map?target=${r.entity_id}`}>{r.name}</Link>
-                  <Link href={`/org/${r.entity_id}`} className="small" style={{ marginLeft: 8 }}>profile</Link>
-                  <RaiseBadge status={r.raise_status} remaining={r.remaining_to_raise} indefinite={r.offering_indefinite} />
-                  {r.type === "fof" && <span className="badge">FoF</span>}
-                  <div className="muted small">{[r.state, r.vintage && `vintage ${r.vintage}`, `raised ${money(r.total_amount_sold)} of ${money(r.total_offering_amount)}`].filter(Boolean).join(" · ")}</div>
-                </td>
-                <td className="small">{r.best_path.nodes.slice(1, -1).map((n) => n.label).join(" → ")}</td>
-                <td><span className={`badge ${r.best_score >= 0.5 ? "ok" : "warn"}`}>{Math.round(r.best_score * 100)}%</span></td>
-                <td>{r.contact_count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {st && (
+        <div className="card tight" style={{ marginBottom: 20 }}>
+          <div className="stats">
+            <div className="stat active"><span className="stat-icon blue"><Icon name="building" /></span><span className="stat-label">Funds reachable</span>
+              <span className="stat-value">{st.funds_reachable.toLocaleString()}</span><span className="stat-sub">of {st.active_funds.toLocaleString()} active funds</span></div>
+            <div className="stat"><span className="stat-icon green"><Icon name="check" /></span><span className="stat-label">Strong routes</span>
+              <span className="stat-value">{st.strong_paths.toLocaleString()}</span><span className="stat-sub">route strength 50% or more</span></div>
+            <div className="stat"><span className="stat-icon violet"><Icon name="users" /></span><span className="stat-label">Contacts used</span>
+              <span className="stat-value">{st.contacts_used.toLocaleString()}</span><span className="stat-sub">people bridging to a fund</span></div>
+          </div>
+        </div>
       )}
-      <p className="muted small">Based on public Form D filings and your own network; matches can be wrong. Open a fund to see evidence for every hop. Not investment advice.</p>
-    </div>
+
+      <div className="card flush">
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)" }}>
+          <FundFilterBar action="/reach" filters={filters} extra={
+            <>
+              <label>
+                <span>Type</span>
+                <select name="type" defaultValue={type === "fof" ? "fof" : ""}>
+                  <option value="">All funds</option>
+                  <option value="fof">Funds of funds</option>
+                </select>
+              </label>
+              <label className="check"><input type="checkbox" name="strong" value="1" defaultChecked={Boolean(strong)} /> Strong routes only</label>
+            </>
+          } />
+        </div>
+        {rows.length === 0 ? (
+          hasFilters(filters) || type || strong
+            ? <Empty icon="search" title="No funds match these filters" actions={<Link className="btn secondary" href="/reach">Clear filters</Link>}>Try a wider status or size range.</Empty>
+            : <Empty icon="network" title="Nothing mapped yet"
+                     actions={<><Link className="btn" href="/import">Connect your network</Link><Link className="btn secondary" href="/settings">Connect Google</Link></>}>
+                Add your LinkedIn connections or Google contacts. Mapping starts automatically.
+              </Empty>
+        ) : (
+          <div className="table-wrap">
+            <table className="cards">
+              <thead><tr><th>Fund</th><th>Best route</th><th>Strength</th><th>Your people</th></tr></thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.entity_id}>
+                    <td style={{ minWidth: 260 }}>
+                      <div className="cell-title"><Link href={`/org/${r.entity_id}`}>{r.name}</Link></div>
+                      <div className="cell-sub">{[r.state, r.vintage && `Vintage ${r.vintage}`, `Raised ${money(r.total_amount_sold)} of ${money(r.total_offering_amount)}`].filter(Boolean).join(" · ")}</div>
+                      <div className="badges" style={{ marginTop: 6 }}>
+                        {r.type === "fof" && <span className="badge violet">Fund of funds</span>}
+                        <RaiseBadge status={r.raise_status} remaining={r.remaining_to_raise} indefinite={r.offering_indefinite} />
+                      </div>
+                    </td>
+                    <td data-label="Best route" className="small" style={{ minWidth: 220 }}>
+                      {r.best_path.nodes.slice(1, -1).map((n) => n.label).join(" → ")}
+                      <div><Link href={`/map?target=${r.entity_id}`} className="xs">View route →</Link></div>
+                    </td>
+                    <td data-label="Strength"><span className={`score ${r.best_score >= 0.5 ? "" : r.best_score >= 0.3 ? "mid" : "low"}`}>{Math.round(r.best_score * 100)}%</span></td>
+                    <td data-label="Your people" className="strong">{r.contact_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {rows.length > 0 && <div className="table-foot">Showing {rows.length} fund{rows.length === 1 ? "" : "s"}, strongest first.</div>}
+      </div>
+      <p className="footnote">Based on public Form D filings and your own network; matches can be wrong. Open a fund to see evidence for every hop. Not investment advice.</p>
+    </Shell>
   );
 }

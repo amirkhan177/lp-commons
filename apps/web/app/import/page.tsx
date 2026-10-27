@@ -1,6 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import Nav from "../nav";
+import Link from "next/link";
+import Shell, { Empty, Flash, Notice, PageHead } from "../ui/shell";
+import { Icon } from "../ui/icons";
 import { db, WORKSPACE_ID } from "@/lib/db";
 import { deleteAllContacts, setMatchDecision } from "@/lib/import";
 import { uploadConnections } from "./actions";
@@ -60,72 +62,98 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
      WHERE c.workspace_id = $1 AND c.match_status <> 'rejected'
      ORDER BY (c.match_status = 'possible') DESC, c.last_name LIMIT 200`, [WORKSPACE_ID])).rows;
 
+  const initials = (f: string, l: string) => `${f[0] ?? ""}${l[0] ?? ""}`.toUpperCase();
   return (
-    <div className="shell">
-      <Nav />
-      <div className="hud-kicker">LP Commons // Network</div>
-      <h1>Your network</h1>
-      <div className="card stack">
-        {agentOn && (
-          <p className="notice" style={{ margin: 0, borderLeftColor: "var(--hud-green)" }}>LinkedIn agent connected — it keeps your connections in sync, so no upload is needed.</p>
-        )}
-        <p style={{ margin: 0 }}>
-          {agentOn ? "Optional: " : ""}Upload your LinkedIn <strong>Connections.csv</strong> (LinkedIn → Settings → Data privacy → Get a copy of
-          your data → Connections). It stays in this private instance and is never added to the public dataset.
-        </p>
-        <form action={uploadConnections} className="stack">
-          <input type="hidden" name="returnTo" value="/import" />
-          <input type="file" name="file" accept=".csv,text/csv" required />
-          <div><button type="submit">Import connections</button></div>
-        </form>
-        {ok && <p className="badge ok">{ok}</p>}
-        {error && <p className="error">{error}</p>}
+    <Shell>
+      <PageHead title="Your network" sub="Your connections, and which of them appear on Form D filings. Everything here stays in this private instance." />
+      <Flash ok={ok} error={error} />
+
+      <div className="card tight" style={{ marginBottom: 20 }}>
+        <div className="stats">
+          <div className="stat active"><span className="stat-icon blue"><Icon name="users" /></span><span className="stat-label">Connections</span><span className="stat-value">{Number(stats.total).toLocaleString()}</span></div>
+          <div className="stat"><span className="stat-icon green"><Icon name="check" /></span><span className="stat-label">Matched to filings</span><span className="stat-value">{Number(stats.matched).toLocaleString()}</span><span className="stat-sub">named on a Form D</span></div>
+          <div className="stat"><span className="stat-icon amber"><Icon name="alert" /></span><span className="stat-label">Need review</span><span className="stat-value">{Number(stats.possible).toLocaleString()}</span><span className="stat-sub">same name, unconfirmed</span></div>
+          <div className="stat"><span className="stat-icon violet"><Icon name="building" /></span><span className="stat-label">At a filing firm</span><span className="stat-value">{Number(stats.firm).toLocaleString()}</span><span className="stat-sub">work where a fund filed</span></div>
+        </div>
       </div>
 
-      <h2>Matches</h2>
-      <p className="muted small">
-        {stats.total} connections · {stats.matched} matched to people named in Form D filings · {stats.possible} possible
-        (same name, no company corroboration — please review) · {stats.firm} work at a firm that has filed a Form D.
-      </p>
-      {matches.length === 0 ? (
-        <p className="muted">No matches yet.</p>
-      ) : (
-        <table>
-          <thead><tr><th>Your connection</th><th>Filing person</th><th>Roles in filings</th><th /></tr></thead>
-          <tbody>
-            {matches.map((m) => (
-              <tr key={m.id}>
-                <td>{m.first_name} {m.last_name}<div className="muted small">{[m.position, m.company].filter(Boolean).join(" · ")}</div></td>
-                <td>
-                  {m.person_name} <span className="muted small">{m.person_state}</span>
-                  <span className={`badge ${m.match_status === "possible" ? "warn" : "ok"}`}>{m.match_status}</span>
-                </td>
-                <td className="small">
-                  {m.roles.slice(0, 3).map((r) => (
-                    <div key={r.url}><a href={r.url} target="_blank" rel="noreferrer">{r.entity}</a> <span className="muted">{r.relationships.join(", ")}</span></div>
-                  ))}
-                  {m.roles.length > 3 && <div className="muted">+{m.roles.length - 3} more</div>}
-                </td>
-                <td>
-                  {m.match_status !== "confirmed" && (
-                    <form action={decide} style={{ display: "flex", gap: 8 }}>
-                      <input type="hidden" name="contactId" value={m.id} />
-                      <button name="decision" value="confirmed" className="secondary" type="submit">Same person</button>
-                      <button name="decision" value="rejected" className="secondary" type="submit">Not them</button>
-                    </form>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <section className="card stack" style={{ marginBottom: 20 }}>
+        <div className="card-head" style={{ margin: 0 }}>
+          <div>
+            <h2>{agentOn ? "Upload a LinkedIn export (optional)" : "Import LinkedIn connections"}</h2>
+            <p>LinkedIn → Settings → Data privacy → Get a copy of your data → Connections. Never added to the public dataset.</p>
+          </div>
+          {!agentOn && <Link className="btn secondary sm" href="/settings">Or connect the LinkedIn agent</Link>}
+        </div>
+        {agentOn && <Notice kind="ok">LinkedIn agent connected. It keeps your connections in sync, so no upload is needed.</Notice>}
+        <form action={uploadConnections} className="row">
+          <input type="hidden" name="returnTo" value="/import" />
+          <input type="file" name="file" accept=".csv,text/csv" required aria-label="Connections.csv" />
+          <button type="submit"><Icon name="upload" size={16} />Import connections</button>
+        </form>
+      </section>
 
-      <h2>Delete your data</h2>
-      <form action={wipe} className="stack">
-        <label className="small"><input type="checkbox" required /> I understand this permanently deletes my imported connections and match decisions.</label>
-        <div><button className="secondary" type="submit">Delete all imported contacts</button></div>
-      </form>
-    </div>
+      <section className="card flush">
+        <div className="card-head" style={{ padding: "20px 24px 16px", margin: 0 }}>
+          <div>
+            <h2>Matches</h2>
+            <p>Connections whose name matches a person on a Form D filing. Confirm or reject the possible ones.</p>
+          </div>
+        </div>
+        {matches.length === 0 ? (
+          <Empty icon="users" title="No matches yet">Matches appear after you import connections and the mapper runs.</Empty>
+        ) : (
+          <div className="table-wrap">
+            <table className="cards">
+              <thead><tr><th>Your connection</th><th>Filing person</th><th>Roles in filings</th><th /></tr></thead>
+              <tbody>
+                {matches.map((m) => (
+                  <tr key={m.id}>
+                    <td style={{ minWidth: 220 }}>
+                      <div className="person">
+                        <span className="avatar">{initials(m.first_name, m.last_name)}</span>
+                        <div><div className="cell-title">{m.first_name} {m.last_name}</div>
+                          <div className="cell-sub">{[m.position, m.company].filter(Boolean).join(" · ")}</div></div>
+                      </div>
+                    </td>
+                    <td data-label="Filing person" style={{ minWidth: 180 }}>
+                      <div className="strong">{m.person_name}</div>
+                      <div className="badges" style={{ marginTop: 4 }}>
+                        <span className={`badge ${m.match_status === "possible" ? "warn" : "ok"}`}>{m.match_status === "possible" ? "Possible" : m.match_status === "confirmed" ? "Confirmed" : "Matched"}</span>
+                        {m.person_state && <span className="muted xs">{m.person_state}</span>}
+                      </div>
+                    </td>
+                    <td data-label="Roles in filings" className="small" style={{ minWidth: 220 }}>
+                      {m.roles.slice(0, 3).map((r) => (
+                        <div key={r.url}><a href={r.url} target="_blank" rel="noreferrer">{r.entity}</a> <span className="muted">{r.relationships.join(", ")}</span></div>
+                      ))}
+                      {m.roles.length > 3 && <div className="muted">+{m.roles.length - 3} more</div>}
+                    </td>
+                    <td>
+                      {m.match_status !== "confirmed" && (
+                        <form action={decide} className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
+                          <input type="hidden" name="contactId" value={m.id} />
+                          <button name="decision" value="confirmed" className="secondary sm" type="submit">Same person</button>
+                          <button name="decision" value="rejected" className="ghost sm" type="submit">Not them</button>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="card section stack">
+        <h2>Delete your data</h2>
+        <p className="muted small">Removes every imported connection and your match decisions from this instance. This can&apos;t be undone.</p>
+        <form action={wipe} className="stack">
+          <label className="check"><input type="checkbox" required /> I understand this permanently deletes my imported connections and match decisions.</label>
+          <div><button className="danger" type="submit"><Icon name="trash" size={16} />Delete all imported contacts</button></div>
+        </form>
+      </section>
+    </Shell>
   );
 }
